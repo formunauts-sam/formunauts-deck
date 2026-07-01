@@ -1,0 +1,442 @@
+/* ============================================================
+   hub.css — FORMUNAUTS Deck Hub styling.
+   ------------------------------------------------------------
+   The daylight twin of template/presenter/: token-driven from
+   brand.css so it reads as FORMUNAUTS, not a dev tool. Light
+   surface, Chillax display headline, blue hero band with the
+   orbital-ring motif, bento rhythm (NOT a uniform card grid),
+   ghost index numerals like the deck. hub.js owns the DOM;
+   this file owns ALL hub layout.
+   ============================================================ */
+
+/* ---- Hub-local tokens layered on the brand set ---- */
+:root {
+  --hub-gutter: clamp(20px, 4vw, 56px);
+  --hub-max: 1240px;
+  --hub-line: var(--border-subtle);
+  --hub-lift: translateY(calc(-1 * var(--lift-hover)));
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(1100px 520px at 85% -6%, var(--blue-100), transparent 62%),
+    var(--bg-base);
+  color: var(--fg-default);
+  font-family: var(--font-body);
+  font-size: var(--body-md);
+  line-height: var(--body-md-lh);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* ============================================================
+   Masthead
+   ============================================================ */
+.hub-top {
+  max-width: var(--hub-max);
+  margin: 0 auto;
+  padding: var(--space-10) var(--hub-gutter) 0;
+}
+.hub-top__logo { height: 28px; width: auto; display: block; margin-bottom: var(--space-12); }
+.hub-top__eyebrow { color: var(--fg-muted); margin: 0 0 var(--space-3); }
+.hub-top__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(44px, 6vw, var(--display-lg));
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--fg-default);
+}
+.hub-top__sub {
+  margin: var(--space-3) 0 0;
+  font-size: var(--body-lg);
+  line-height: var(--body-lg-lh);
+  color: var(--fg-muted);
+  max-width: 560px;
+}
+
+/* ============================================================
+   Page shell + section labels (kicker-style rails)
+   ============================================================ */
+.hub {
+  max-width: var(--hub-max);
+  margin: 0 auto;
+  padding: var(--space-12) var(--hub-gutter) var(--space-20);
+  display: grid;
+  gap: var(--space-16);
+}
+.hub-section__label {
+  color: var(--fg-muted);
+  margin: 0 0 var(--space-5);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--hub-line);
+}
+
+/* ============================================================
+   Live peek thumbnails — a 1280×720 deck iframe scaled to fit.
+   hub.js sets --peek-scale = wrapperWidth / 1280 (transform only).
+   ============================================================ */
+.hub-peek {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--blue-50);
+}
+.hub-peek iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1280px;
+  height: 720px;
+  border: 0;
+  transform: scale(var(--peek-scale, 0.25));
+  transform-origin: top left;
+  pointer-events: none;   /* the wrapping <a> takes the click */
+}
+
+/* ============================================================
+   "Up next" row — hero band (newest deck) + ghost plan card
+   ============================================================ */
+.hub-next__row {
+  display: grid;
+  grid-template-columns: minmax(0, 7.8fr) minmax(0, 4.2fr);
+  gap: var(--gap-bento);
+  align-items: stretch;
+}
+
+/* --- Hero band: the cover's blue gradient + orbital rings --- */
+.hub-hero {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: var(--space-8);
+  align-items: center;
+  padding: var(--space-10);
+  border-radius: var(--radius-2xl);
+  color: var(--fg-inverse);
+  background: linear-gradient(135deg, var(--fmnts-primary-dark) 0%, var(--fmnts-primary) 100%);
+  box-shadow: var(--elevation-4);
+}
+.hub-orbit { position: absolute; right: -240px; bottom: -300px; width: 720px; height: 720px; pointer-events: none; }
+.hub-orbit circle { fill: none; }
+.hub-orbit .ring-1 { stroke: rgba(255, 255, 255, 0.30); stroke-width: 1.5; }
+.hub-orbit .ring-2 { stroke: rgba(255, 255, 255, 0.14); stroke-width: 1.25; }
+.hub-orbit .ring-dot { fill: rgba(255, 255, 255, 0.95); stroke: none; }
+
+.hub-hero__copy { position: relative; z-index: 1; }
+.hub-hero__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: var(--overline);
+  line-height: var(--overline-lh);
+  letter-spacing: 0.30em;
+  color: rgba(255, 255, 255, 0.72);
+}
+/* the ONE red stopper on this surface — the upcoming-demo pip */
+.hub-hero__pip { width: 8px; height: 8px; border-radius: 50%; background: var(--fmnts-secondary); }
+.hub-hero__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--display-sm);
+  line-height: var(--display-sm-lh);
+}
+.hub-hero__date { margin: var(--space-2) 0 0; font-size: var(--body-lg); color: rgba(255, 255, 255, 0.86); }
+.hub-hero__meta { margin: var(--space-1) 0 0; font-size: var(--body-sm); color: rgba(255, 255, 255, 0.64); }
+.hub-hero__actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-8); }
+
+.hub-hero__stage {
+  position: relative;
+  z-index: 1;
+  display: block;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--elevation-5);
+  transition: transform var(--dur-normal) var(--ease-orbit), box-shadow var(--dur-normal) var(--ease-orbit);
+}
+.hub-hero__stage:hover { transform: var(--hub-lift); }
+
+/* --- Ghost "Plan the next demo" card --- */
+.hub-plan {
+  height: 100%;
+  padding: var(--space-6);
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-2xl);
+  color: var(--fg-muted);
+  transition: border-color var(--dur-normal) var(--ease-orbit), background var(--dur-normal) var(--ease-orbit);
+}
+.hub-plan:hover,
+.hub-plan[open] { border-color: var(--fmnts-primary); background: var(--blue-50); }
+.hub-plan__summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: var(--space-4); }
+.hub-plan__summary::-webkit-details-marker { display: none; }
+.hub-plan__plus {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 50%;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--fmnts-primary);
+  transition: transform var(--dur-normal) var(--ease-orbit), border-color var(--dur-normal) var(--ease-orbit);
+}
+.hub-plan[open] .hub-plan__plus { transform: rotate(45deg); border-style: solid; border-color: var(--fmnts-primary); }
+.hub-plan__label { font-weight: 700; font-size: var(--h5); line-height: var(--h5-lh); color: var(--fg-default); }
+.hub-plan__hint {
+  margin-left: auto;
+  font-size: var(--body-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--fg-subtle);
+}
+.hub-plan__steps {
+  margin: var(--space-5) 0 0;
+  padding: 0 0 0 var(--space-6);
+  display: grid;
+  gap: var(--space-3);
+  font-size: var(--body-sm);
+  line-height: var(--body-sm-lh);
+  color: var(--fg-default);
+}
+.hub-plan__steps li::marker { font-family: var(--font-display); font-weight: 600; color: var(--fmnts-primary); }
+.hub-plan code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--blue-100);
+  color: var(--fmnts-primary-dark);
+  overflow-wrap: anywhere;
+}
+
+/* ============================================================
+   Library — bento rhythm (7/5 alternating, never uniform)
+   ============================================================ */
+.hub-grid {
+  display: grid;
+  grid-template-columns: var(--grid-bento);
+  gap: var(--gap-bento);
+}
+.hub-card { grid-column: span 6; }
+.hub-card:nth-child(4n + 1) { grid-column: span 7; }
+.hub-card:nth-child(4n + 2) { grid-column: span 5; }
+.hub-card:nth-child(4n + 3) { grid-column: span 5; }
+.hub-card:nth-child(4n + 4) { grid-column: span 7; }
+
+.hub-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--elevation-1);
+  transition: transform var(--dur-normal) var(--ease-orbit), box-shadow var(--dur-normal) var(--ease-orbit);
+}
+.hub-card:hover { transform: var(--hub-lift); box-shadow: var(--elevation-4); }
+
+.hub-card__stage { position: relative; display: block; border-bottom: 1px solid var(--hub-line); }
+.hub-card__stage::after {
+  content: "Open deck";
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: rgba(30, 42, 51, 0.78);
+  color: var(--fg-inverse);
+  font-size: var(--body-xs);
+  font-weight: 600;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity var(--dur-fast) var(--ease-orbit), transform var(--dur-fast) var(--ease-orbit);
+}
+.hub-card__stage:hover::after,
+.hub-card__stage:focus-visible::after { opacity: 1; transform: translateY(0); }
+
+.hub-card__body { position: relative; padding: var(--space-6); display: grid; gap: var(--space-2); }
+/* ghost oversized index numeral, like the deck's page numerals */
+.hub-card__ghost {
+  position: absolute;
+  right: 12px;
+  bottom: -16px;
+  font-size: 120px;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--blue-100);
+  pointer-events: none;
+  user-select: none;
+}
+.hub-card__body > :not(.hub-card__ghost) { position: relative; }  /* text paints above the ghost */
+.hub-card__date {
+  margin: 0;
+  font-size: var(--body-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--fg-muted);
+}
+.hub-card__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--h3);
+  line-height: var(--h3-lh);
+  color: var(--fg-default);
+}
+.hub-card__meta { margin: 0; font-size: var(--body-sm); line-height: var(--body-sm-lh); color: var(--fg-muted); }
+.hub-card__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
+
+/* --- Expandable slide strip (lazy iframes, horizontal scroll) --- */
+.hub-strip { border-top: 1px solid var(--hub-line); background: var(--blue-50); }
+.hub-strip__scroller {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.hub-strip__slide {
+  position: relative;
+  flex: 0 0 200px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: var(--elevation-1);
+  transition: transform var(--dur-fast) var(--ease-orbit), box-shadow var(--dur-fast) var(--ease-orbit);
+}
+.hub-strip__slide:hover { transform: var(--hub-lift); box-shadow: var(--elevation-3); }
+.hub-strip__num {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: rgba(30, 42, 51, 0.66);
+  color: var(--fg-inverse);
+  font-size: var(--body-xs);
+  line-height: var(--body-xs-lh);
+}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.hub-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-weight: 600;
+  font-size: var(--body-sm);
+  line-height: 1;
+  padding: 10px 16px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  background: var(--bg-surface);
+  color: var(--fg-default);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease-orbit), border-color var(--dur-fast) var(--ease-orbit),
+              color var(--dur-fast) var(--ease-orbit), transform var(--dur-instant) var(--ease-orbit);
+}
+.hub-btn:hover { border-color: var(--fmnts-primary); color: var(--fmnts-primary); }
+.hub-btn:active { transform: translateY(1px); }
+
+.hub-btn--primary { background: var(--fmnts-primary); border-color: var(--fmnts-primary); color: var(--fg-on-primary); }
+.hub-btn--primary:hover { background: var(--fmnts-primary-dark); border-color: var(--fmnts-primary-dark); color: var(--fg-on-primary); }
+
+.hub-btn--hero {
+  background: var(--bg-surface);
+  border-color: var(--bg-surface);
+  color: var(--fmnts-primary-dark);
+  font-size: var(--body-md);
+  padding: 12px 22px;
+}
+.hub-btn--hero:hover { background: var(--blue-100); border-color: var(--blue-100); color: var(--fmnts-primary-dark); }
+
+.hub-btn--onblue { background: transparent; border-color: rgba(255, 255, 255, 0.45); color: var(--fg-inverse); }
+.hub-btn--onblue:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--neutral-0); color: var(--neutral-0); }
+
+.hub-btn--ghost { background: transparent; border-style: dashed; }
+.hub-btn--ghost[aria-expanded="true"] { border-style: solid; border-color: var(--fmnts-primary); color: var(--fmnts-primary); }
+
+/* copy feedback — semantic success, works on light and blue */
+.hub-btn.is-copied { background: var(--success-100); border-color: var(--success-500); color: var(--success-700); }
+
+/* ============================================================
+   Empty state + footer
+   ============================================================ */
+.hub-empty {
+  margin: 0;
+  padding: var(--space-10);
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-xl);
+  color: var(--fg-muted);
+}
+.hub-empty code { font-family: var(--font-mono); font-size: 13px; color: var(--fmnts-primary-dark); }
+
+.hub-foot {
+  max-width: var(--hub-max);
+  margin: 0 auto;
+  padding: var(--space-8) var(--hub-gutter) var(--space-12);
+  border-top: 1px solid var(--hub-line);
+  color: var(--fg-subtle);
+  font-size: var(--body-xs);
+  line-height: var(--body-xs-lh);
+}
+.hub-foot p { margin: 0; }
+
+/* ============================================================
+   Responsive — the bento collapses calmly, nothing overflows
+   ============================================================ */
+@media (max-width: 1024px) {
+  .hub-next__row { grid-template-columns: 1fr; }
+  .hub-hero { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  .hub-card,
+  .hub-card:nth-child(4n + 1),
+  .hub-card:nth-child(4n + 2),
+  .hub-card:nth-child(4n + 3),
+  .hub-card:nth-child(4n + 4) { grid-column: span 12; }
+}
+
+/* Reduced motion — hub chrome goes still (peeks handle their own gate) */
+@media (prefers-reduced-motion: reduce) {
+  .hub-card,
+  .hub-card:hover,
+  .hub-hero__stage,
+  .hub-hero__stage:hover,
+  .hub-strip__slide,
+  .hub-strip__slide:hover { transform: none; transition: none; }
+  .hub-plan,
+  .hub-plan__plus,
+  .hub-btn,
+  .hub-card__stage::after { transition: none; }
+}

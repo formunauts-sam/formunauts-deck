@@ -157,37 +157,94 @@
 /* -----------------------------------------------------------
    4. Decorative rocket + CSS orbital rings (cover / closing).
       Rings are DRAWN — never key-visual-space.png.
+      BOOKEND CONTRACT (A6): ring svg + rocket wrapper carry
+      data-id="bookend-ring/-rocket"; reveal's auto-animate morphs
+      them across the cover↔closing pair by writing an inline
+      transform on the MATCHED ROOT. Therefore the roots stay
+      transform-free: the rocket pose rides the inner img
+      (--rocket-rest) and the drift loop rides the inner <g>.
 ----------------------------------------------------------- */
 .rocket-mark {
   position: absolute; pointer-events: none; user-select: none;
   height: 300px; width: 300px;                 /* SVG is 1:1; was 560px & clipped */
+  z-index: 0;
+  --rocket-rest: rotate(0deg);                  /* resting pose, applied on the img */
+}
+.rocket-mark__img {
+  width: 100%; height: 100%;
   opacity: 0.92;                                /* a real object, not a 0.10 ghost */
   filter: drop-shadow(0 24px 60px rgba(0,15,26,0.35));
-  z-index: 0;
+  transform: var(--rocket-rest);
 }
 .rocket-mark--tr {                              /* cover: complete rocket, only exhaust bleeds the corner */
   right: 40px; bottom: -46px; top: auto; left: auto;
-  transform: rotate(-4deg);
+  --rocket-rest: rotate(-4deg);
 }
-/* closing paints NO rocket (see closing.js) */
+.rocket-mark--landed {                          /* closing: LANDED — small, upright, above the site line */
+  height: 140px; width: 140px;
+  right: 84px; bottom: 96px; top: auto; left: auto;
+}
+.rocket-mark--landed .rocket-mark__img {
+  filter: drop-shadow(0 8px 18px rgba(0,15,26,0.30));  /* close to the ground → tight shadow */
+}
 .rocket-watermark {
   position: absolute; right: 48px; bottom: 44px; height: 200px; width: 200px;
   opacity: 0.05; pointer-events: none; user-select: none;
 }
 
-/* Orbital rings — thin SVG arcs sweeping a corner */
+/* Orbital rings — thin SVG arcs sweeping a corner.
+   The closing (tl) ring is LARGER + LOWER than the cover's (br), so the
+   bookend morph reads as the same orbit sweeping over to enclose the
+   opposite corner — the old rotate(180deg) is gone (root must stay
+   transform-free, see contract above); the tl dot is mirrored in markup. */
 .orbit { position: absolute; pointer-events: none; overflow: visible; }
+.orbit__svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .orbit--br { right: -180px; bottom: -220px; width: 820px; height: 820px; }
-.orbit--tl { left: -200px;  top: -240px;    width: 760px; height: 760px; transform: rotate(180deg); }
+.orbit--tl { left: -260px;  top: -180px;    width: 900px; height: 900px; }
 .orbit circle { fill: none; }
 .orbit .ring-1 { stroke: rgba(255,255,255,0.34); stroke-width: 1.5; }
 .orbit .ring-2 { stroke: rgba(255,255,255,0.16); stroke-width: 1.25; }
 .orbit .ring-dot { fill: rgba(255,255,255,0.95); stroke: none; }
 
-/* Ring drift: very slow, ≤2°, transform only (gated off in reduced-motion via anim.js) */
+/* Ring drift: very slow, ≤2°, transform only, on the INNER group so it never
+   fights the inline transform auto-animate writes on the matched svg root
+   (gated off in reduced-motion via anim.js) */
 @keyframes ring-drift { from { transform: rotate(0deg); } to { transform: rotate(2deg); } }
-.orbit--br.is-drifting { animation: ring-drift 20s linear infinite alternate; }
-.orbit--tl.is-drifting { animation: ring-drift 20s linear infinite alternate; transform-origin: center; }
+.orbit__drift { transform-box: view-box; transform-origin: center; }
+.orbit.is-drifting .orbit__drift { animation: ring-drift 20s linear infinite alternate; }
+
+/* Bookend entrance (A7): the rings DRAW themselves in on slide entry
+   (~1.1s stroke-dashoffset sweep, normalized by pathLength=100), the dot
+   pops at the end of the sweep, then the rocket rises 14px + fades in.
+   Re-triggered by reveal's .present class exactly like the §6 .anim
+   stagger. The [data-auto-animate=""] guard skips the re-draw when the
+   slide is entered VIA the cover↔closing morph — the already-drawn ring
+   travels instead (A6); it never redraws mid-flight. (Reveal only resets
+   the attribute between paired slides, so anim.js fire() clears stale
+   "pending"/"running" from every non-.present section on slidechanged.)
+   Default = final drawn state (past/future/peek/print). */
+@keyframes ring-draw {
+  from { stroke-dasharray: 100 100; stroke-dashoffset: 100; }
+  to   { stroke-dasharray: 100 100; stroke-dashoffset: 0; }
+}
+@keyframes ring-dot-in { from { opacity: 0; } }
+@keyframes rocket-rise {
+  from { opacity: 0; transform: translateY(14px) var(--rocket-rest, rotate(0deg)); }
+  /* no `to` — settles into the element's own resting style */
+}
+.reveal .slides section[data-auto-animate=""].present .orbit--bookend .ring-1,
+.reveal .slides section[data-auto-animate=""].present .orbit--bookend .ring-2 {
+  animation: ring-draw 1100ms var(--ease-orbit) both;
+}
+.reveal .slides section[data-auto-animate=""].present .orbit--bookend .ring-2 {
+  animation-delay: 120ms;                       /* inner ring trails the outer sweep */
+}
+.reveal .slides section[data-auto-animate=""].present .orbit--bookend .ring-dot {
+  animation: ring-dot-in var(--dur-normal) var(--ease-orbit) 1100ms both;
+}
+.reveal .slides section[data-auto-animate=""].present .rocket-mark .rocket-mark__img {
+  animation: rocket-rise var(--dur-slower) var(--ease-orbit) 1220ms both;  /* after ring-2 lands */
+}
 
 /* =========================================================================
    ARCHETYPE LAYOUTS
@@ -514,7 +571,9 @@
 .count-up { font-variant-numeric: tabular-nums; }
 
 @media (prefers-reduced-motion: reduce) {
-  .orbit.is-drifting { animation: none !important; }
+  .orbit.is-drifting .orbit__drift { animation: none !important; }
+  /* bookend: final state instantly — ring fully drawn, rocket resting */
+  .orbit--bookend circle, .rocket-mark__img { animation: none !important; }
   .masonry__tile .asset-frame > img { transition: none !important; }
   /* instant, no stagger — everything visible immediately */
   .reveal .slides section .anim,
@@ -570,7 +629,9 @@
    The live deck is unaffected; this only lifts the entrance gate for export.
    ========================================================================= */
 body.print-pdf .reveal .slides section .anim { opacity: 1 !important; animation: none !important; transform: none !important; }
-body.print-pdf .orbit.is-drifting { animation: none !important; }
+body.print-pdf .orbit.is-drifting .orbit__drift { animation: none !important; }
+/* bookend: export the final state — ring fully drawn, rocket resting */
+body.print-pdf .orbit--bookend circle, body.print-pdf .rocket-mark__img { animation: none !important; }
 
 /* =========================================================================
    §9 STATUS BOARD (slide 09) — internal workstreams with done/active/next state
@@ -621,7 +682,8 @@ body.print-pdf .orbit.is-drifting { animation: none !important; }
 .reveal.overview .present-btn--console, body.print-pdf .present-btn--console { display: none; }
 
 /* Peek previews (presenter thumbnails): freeze motion, hide all draw/control chrome */
-body.is-peek .orbit.is-drifting { animation: none !important; }
+body.is-peek .orbit.is-drifting .orbit__drift { animation: none !important; }
+body.is-peek .orbit--bookend circle, body.is-peek .rocket-mark__img { animation: none !important; }
 body.is-peek .marker-overlay, body.is-peek .marker-toolbar, body.is-peek .customcontrols,
 body.is-peek .present-btn, body.is-peek .present-btn--console { display: none !important; }
 /* Print: draw layers + toolbar never in exports */

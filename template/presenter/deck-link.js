@@ -11,6 +11,17 @@
      deck → presenter : {t:'bye'}                (on pagehide)
      presenter → deck : {t:'hello'}              (request snapshot)
      presenter → deck : {t:'cmd', name, h?, v?}  (next|prev|goto|pause|black)
+
+   Annotation remote-drive (forwarded to the RevealMarker plugin;
+   nx/ny are 0..1 normalized to the slide viewport):
+     presenter → deck : {type:'tool', tool}            laser|ink|spotlight|null
+     presenter → deck : {type:'toolColor', color}      ink colour hex
+     presenter → deck : {type:'pointer', nx, ny}       laser / spotlight move
+     presenter → deck : {type:'pointerHide'}           pointer left the preview
+     presenter → deck : {type:'strokeStart', nx, ny}   ink pen down
+     presenter → deck : {type:'strokePoint', nx, ny}   ink pen move
+     presenter → deck : {type:'strokeEnd'}             ink pen up (commit)
+     presenter → deck : {type:'clearInk'}              wipe current slide ink
    ============================================================ */
 const CHANNEL = "fmnts-deck";
 const SNAPSHOT_KEY = "fmnts-deck-state";
@@ -63,12 +74,47 @@ export function initDeckLink(Reveal) {
     }
   }
 
+  /* ---- Annotation remote-drive: forward presenter tool messages to the
+     marker plugin. Guarded — a deck without RevealMarker warns once and
+     keeps presenting; annotation must never break the live deck. ---- */
+  let warnedNoMarker = false;
+  function markerApi() {
+    const m =
+      (typeof window !== "undefined" &&
+        (window.__fmntsMarker || window.RevealMarker)) ||
+      null;
+    if (m && typeof m.pointerMove === "function") return m;
+    if (!warnedNoMarker) {
+      warnedNoMarker = true;
+      console.warn("[deck-link] marker plugin unavailable, annotation messages ignored");
+    }
+    return null;
+  }
+
+  function execMarker(msg) {
+    const m = markerApi();
+    if (!m) return;
+    try {
+      switch (msg.type) {
+        case "tool": m.setTool(msg.tool || null); break;
+        case "toolColor": if (typeof msg.color === "string") m.setColor(msg.color); break;
+        case "pointer": m.pointerMove(msg.nx, msg.ny); break;
+        case "pointerHide": m.pointerHide(); break;
+        case "strokeStart": m.strokeStart(msg.nx, msg.ny); break;
+        case "strokePoint": m.strokePoint(msg.nx, msg.ny); break;
+        case "strokeEnd": m.strokeEnd(); break;
+        case "clearInk": m.clearInk(); break;
+      }
+    } catch { /* ignore — see guard note above */ }
+  }
+
   if (bc) {
     bc.onmessage = (ev) => {
       const d = ev && ev.data;
       if (!d || d.proto !== PROTO) return;
       if (d.t === "hello") publish();
       else if (d.t === "cmd") exec(d.name, d);
+      else if (typeof d.type === "string") execMarker(d);
     };
   }
 

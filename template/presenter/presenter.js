@@ -18,6 +18,10 @@
      deck  → presenter : {t:'bye'}                     (on pagehide)
      presenter → deck  : {t:'hello'}                   (request a fresh snapshot)
      presenter → deck  : {t:'cmd', name, h?, v?}       (next|prev|goto|pause|black)
+     presenter → deck  : {type:'tool'|'toolColor'|'pointer'|'pointerHide'|
+                          'strokeStart'|'strokePoint'|'strokeEnd'|'clearInk'}
+                         (annotation remote-drive → RevealMarker via
+                          deck-link.js; nx/ny are 0..1 in slide space)
 
    Notes are ALWAYS delivered as channel data (the deck reads its
    own <aside class="notes"> innerHTML and broadcasts it) — never
@@ -43,6 +47,17 @@ const WATCHDOG_MS = 2000;
    standalone / jump-list fallback loads the same content the deck shows.
    Overridable with ?deck=YYYY-MM-DD (same rule as index.html). */
 const DEFAULT_DECK = "2026-07-01";
+
+/* Annotation remote-drive. The preview maps pointer positions onto the
+   same 16:9 aspect-fit letterbox reveal applies inside the peek iframe,
+   so nx/ny land on the deck exactly where they sat on the preview. */
+const SLIDE_W = 1280; // author frame — mirrors index.html's reveal width
+const SLIDE_H = 720; // author frame — mirrors index.html's reveal height
+const PEEK_MIN_SCALE = 0.2; // mirrors index.html minScale — the peek deck
+const PEEK_MAX_SCALE = 2.0; // clamps too, so our letterbox math must match
+const POINTER_SEND_MS = 33; // ~30Hz pointer/stroke send throttle
+const INK_PREVIEW_WIDTH = 4; // author px — mirrors marker ink defaultWidth
+const INK_DEFAULT_COLOR = "#0074C8"; // brand primary — default ink colour
 
 /* --------------------------------------------------------------
    Tiny helpers
@@ -214,6 +229,11 @@ class Presenter {
       btnReset: $("#pv-reset-timer"),
       btnReconnect: $("#pv-reconnect"),
       openDeck: $("#pv-open-deck"),
+      toolShell: $("#pv-current-shell"),
+      inkOverlay: $("#pv-ink-overlay"),
+      toolButtons: Array.from(document.querySelectorAll(".pv-tool[data-tool]")),
+      colorDots: Array.from(document.querySelectorAll(".pv-tool-color")),
+      btnClearInk: $("#pv-tool-clear"),
     };
 
     /* Live state (last snapshot from the deck, or a synthesized one). */
@@ -244,6 +264,15 @@ class Presenter {
        when the index hasn't actually changed). */
     this.currentSrcKey = null;
     this.nextSrcKey = null;
+
+    /* Annotation tool strip (remote-drives the deck's marker plugin). */
+    this.tool = null; // 'laser' | 'ink' | 'spotlight' | null
+    this.toolColor = INK_DEFAULT_COLOR;
+    this.inkDrawing = false;
+    this.annotPointerId = null;
+    this.inkLastLocal = null; // last overlay-space point of the live stroke
+    this.lastPointerSentAt = 0; // performance.now() of the last send (throttle)
+    this.overlayCtx = null;
   }
 
   async init() {
@@ -270,6 +299,7 @@ class Presenter {
     this.buildJumpList();
     this.wireControls();
     this.wireKeyboard();
+    this.wireAnnotation();
 
     /* Ask a live deck (if any) to send a fresh snapshot right away. */
     this.bus.send({ t: "hello" });
@@ -523,6 +553,8 @@ class Presenter {
     if (this.el.current && this.currentSrcKey !== curKey) {
       this.pointPreview(this.el.current, s.h, s.v);
       this.currentSrcKey = curKey;
+      /* New slide → the deck's ink is per-slide; drop the local mirror. */
+      this.clearOverlay();
     }
 
     /* Next slide preview. */
@@ -798,6 +830,8 @@ class Presenter {
       /* Don't steal typing focus (there are no inputs, but be safe). */
       const tag = (ev.target && ev.target.tagName) || "";
       if (tag === "INPUT" || tag === "TEXTAREA") return;
+      /* Leave browser shortcuts (Cmd/Ctrl/Alt combos) alone. */
+      if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
 
       switch (ev.key) {
         case "ArrowRight":
@@ -827,6 +861,26 @@ class Presenter {
           ev.preventDefault();
           this.resetTimer();
           break;
+        case "l":
+        case "L":
+          ev.preventDefault();
+          this.setTool("laser");
+          break;
+        case "i":
+        case "I":
+          ev.preventDefault();
+          this.setTool("ink");
+          break;
+        case "s":
+        case "S":
+          ev.preventDefault();
+          this.setTool("spotlight");
+          break;
+        case "c":
+        case "C":
+          ev.preventDefault();
+          this.clearAnnotations();
+          break;
         case "Escape":
           this.closeJump();
           break;
@@ -834,6 +888,244 @@ class Presenter {
           break;
       }
     });
+  }
+
+  /* ---- Annotation tools (remote-drive the deck's marker plugin) ----
+     The strip under the current preview arms laser / ink / spotlight.
+     Pointer positions are normalized to the slide's 0..1 space via the
+     SAME aspect-fit letterbox reveal applies inside the peek iframe,
+     then broadcast; deck-link.js forwards them to RevealMarker. Sends
+     no-op gracefully when no deck window is listening. */
+  wireAnnotation() {
+    this.el.toolButtons.forEach((btn) =>
+      btn.addEventListener("click", () => this.setTool(btn.dataset.tool))
+    );
+    this.el.colorDots.forEach((dot) =>
+      dot.addEventListener("click", () => this.setToolColor(dot.dataset.color))
+    );
+    this.el.btnClearInk?.addEventListener("click", () => this.clearAnnotations());
+
+    const shell = this.el.toolShell;
+    if (!shell) return;
+    shell.addEventListener("pointerdown", (ev) => this.onAnnotDown(ev));
+    shell.addEventListener("pointermove", (ev) => this.onAnnotMove(ev));
+    shell.addEventListener("pointerup", (ev) => this.onAnnotUp(ev));
+    shell.addEventListener("pointercancel", (ev) => this.onAnnotUp(ev));
+    shell.addEventListener("pointerleave", () => this.onAnnotLeave());
+    window.addEventListener("resize", () => this.sizeInkOverlay());
+  }
+
+  /* Toggle a tool on the strip. Re-selecting the active tool disarms it. */
+  setTool(tool) {
+    const next = this.tool === tool ? null : tool;
+    if (this.inkDrawing) {
+      /* Never strand a half-drawn stroke on a tool switch. */
+      this.inkDrawing = false;
+      this.annotPointerId = null;
+      this.inkLastLocal = null;
+      this.bus.send({ type: "strokeEnd" });
+    }
+    this.tool = next;
+    this.bus.send({ type: "tool", tool: next });
+    this.syncToolStrip();
+  }
+
+  /* Pick an ink colour. Mirrors the deck toolbar semantics: choosing a
+     colour arms the pen (the deck's setColor switches to ink mode too). */
+  setToolColor(color) {
+    if (!color) return;
+    this.toolColor = color;
+    this.tool = "ink";
+    this.bus.send({ type: "toolColor", color });
+    this.syncToolStrip();
+  }
+
+  /* Clear both sides: the local mirror and the deck's current-slide ink. */
+  clearAnnotations() {
+    this.clearOverlay();
+    this.bus.send({ type: "clearInk" });
+  }
+
+  syncToolStrip() {
+    this.el.toolButtons.forEach((btn) => {
+      btn.setAttribute("aria-pressed", String(btn.dataset.tool === this.tool));
+    });
+    this.el.colorDots.forEach((dot) => {
+      dot.setAttribute("aria-pressed", String(dot.dataset.color === this.toolColor));
+    });
+    if (this.el.toolShell) {
+      this.el.toolShell.classList.toggle("is-annotating", !!this.tool);
+    }
+  }
+
+  /* ---- Pointer handlers on the current-preview shell ---- */
+  onAnnotDown(ev) {
+    if (this.tool !== "ink") return;
+    if (ev.button != null && ev.button !== 0) return;
+    if (this.inkDrawing) return; // secondary touch (palm) must not steal the stroke
+    const n = this.normFromEvent(ev);
+    if (!n) return;
+    this.inkDrawing = true;
+    this.annotPointerId = ev.pointerId ?? null;
+    try {
+      this.el.toolShell.setPointerCapture &&
+        this.el.toolShell.setPointerCapture(ev.pointerId);
+    } catch {
+      /* ignore */
+    }
+    this.sizeInkOverlay();
+    this.inkLastLocal = this.overlayPoint(n);
+    this.drawOverlayDot(this.inkLastLocal);
+    this.lastPointerSentAt = performance.now();
+    this.bus.send({ type: "strokeStart", nx: n.nx, ny: n.ny });
+    ev.preventDefault();
+  }
+
+  onAnnotMove(ev) {
+    if (!this.tool) return;
+    const n = this.normFromEvent(ev);
+    if (!n) return;
+
+    if (this.tool === "ink") {
+      if (!this.inkDrawing) return;
+      if (this.annotPointerId != null && ev.pointerId !== this.annotPointerId)
+        return;
+      if (performance.now() - this.lastPointerSentAt < POINTER_SEND_MS) return;
+      this.lastPointerSentAt = performance.now();
+      const p = this.overlayPoint(n);
+      this.drawOverlaySegment(this.inkLastLocal, p);
+      this.inkLastLocal = p;
+      this.bus.send({ type: "strokePoint", nx: n.nx, ny: n.ny });
+      ev.preventDefault();
+      return;
+    }
+
+    /* Laser + spotlight ride bare movement (no button), ~30Hz. */
+    if (performance.now() - this.lastPointerSentAt < POINTER_SEND_MS) return;
+    this.lastPointerSentAt = performance.now();
+    this.bus.send({ type: "pointer", nx: n.nx, ny: n.ny });
+  }
+
+  onAnnotUp(ev) {
+    if (this.tool !== "ink" || !this.inkDrawing) return;
+    if (this.annotPointerId != null && ev.pointerId !== this.annotPointerId)
+      return;
+    this.inkDrawing = false;
+    this.annotPointerId = null;
+    try {
+      this.el.toolShell.releasePointerCapture &&
+        this.el.toolShell.releasePointerCapture(ev.pointerId);
+    } catch {
+      /* ignore */
+    }
+    /* Flush the final point past the throttle so the stroke ends exactly
+       where the pen lifted, then commit on the deck side. */
+    const n = this.normFromEvent(ev);
+    if (n) {
+      this.drawOverlaySegment(this.inkLastLocal, this.overlayPoint(n));
+      this.bus.send({ type: "strokePoint", nx: n.nx, ny: n.ny });
+    }
+    this.inkLastLocal = null;
+    this.bus.send({ type: "strokeEnd" });
+  }
+
+  onAnnotLeave() {
+    /* The vanishing laser fades on its own; the spotlight must hide. */
+    if (this.tool === "laser" || this.tool === "spotlight") {
+      this.bus.send({ type: "pointerHide" });
+    }
+  }
+
+  /* ---- Geometry: preview pixels ↔ normalized slide space ----
+     Reveal aspect-fits the 1280×720 author frame inside the peek iframe
+     (scale = min(w/1280, h/720), centred), which produces letterbox bars
+     when the shell is not exactly 16:9. Map through that SAME rect so a
+     point on the preview lands on the identical spot on the deck. */
+  normFromEvent(ev) {
+    const shell = this.el.toolShell;
+    if (!shell) return null;
+    const r = shell.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    const scale = clamp(Math.min(r.width / SLIDE_W, r.height / SLIDE_H),
+      PEEK_MIN_SCALE, PEEK_MAX_SCALE); // the peek deck clamps identically
+    const w = SLIDE_W * scale;
+    const h = SLIDE_H * scale;
+    const left = r.left + (r.width - w) / 2;
+    const top = r.top + (r.height - h) / 2;
+    return {
+      nx: clamp((ev.clientX - left) / w, 0, 1),
+      ny: clamp((ev.clientY - top) / h, 0, 1),
+    };
+  }
+
+  /* Convert a normalized slide point back to overlay CSS px (+ scale so
+     stroke width tracks the preview size). */
+  overlayPoint(n) {
+    const r = this.el.toolShell.getBoundingClientRect();
+    const scale = clamp(Math.min(r.width / SLIDE_W, r.height / SLIDE_H),
+      PEEK_MIN_SCALE, PEEK_MAX_SCALE); // keep in lockstep with normFromEvent
+    const w = SLIDE_W * scale;
+    const h = SLIDE_H * scale;
+    return {
+      x: (r.width - w) / 2 + n.nx * w,
+      y: (r.height - h) / 2 + n.ny * h,
+      scale,
+    };
+  }
+
+  /* ---- Local ink mirror (lightweight canvas above the preview) ---- */
+  /* Size the mirror to the shell at device-pixel sharpness. Resizing a
+     canvas wipes it — acceptable for a live mirror layer. */
+  sizeInkOverlay() {
+    const shell = this.el.toolShell;
+    const cv = this.el.inkOverlay;
+    if (!shell || !cv) return;
+    const ratio = Math.max(1, window.devicePixelRatio || 1);
+    const r = shell.getBoundingClientRect();
+    const w = Math.round(r.width * ratio);
+    const h = Math.round(r.height * ratio);
+    if (cv.width !== w || cv.height !== h) {
+      cv.width = w;
+      cv.height = h;
+    }
+    this.overlayCtx = cv.getContext("2d");
+    this.overlayCtx.setTransform(ratio, 0, 0, ratio, 0, 0); // draw in CSS px
+  }
+
+  drawOverlayDot(p) {
+    const ctx = this.overlayCtx;
+    if (!ctx || !p) return;
+    ctx.save();
+    ctx.fillStyle = this.toolColor;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, Math.max(0.75, (INK_PREVIEW_WIDTH * p.scale) / 2), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  drawOverlaySegment(a, b) {
+    const ctx = this.overlayCtx;
+    if (!ctx || !a || !b) return;
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = this.toolColor;
+    ctx.lineWidth = Math.max(1.5, INK_PREVIEW_WIDTH * b.scale);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  clearOverlay() {
+    const cv = this.el.inkOverlay;
+    if (!cv || !cv.width) return;
+    const ctx = cv.getContext("2d");
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.restore();
   }
 }
 

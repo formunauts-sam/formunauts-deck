@@ -20,7 +20,10 @@
 
    Valid reveal 6.x plugin: exposes { id:'marker', init(reveal) }.
    Public methods are callable as RevealMarker.method() (driven by the
-   customcontrols onclick actions and, later, the presenter console).
+   customcontrols onclick actions and the presenter console: deck-link.js
+   forwards annotation messages to the remote API — setTool / setColor /
+   pointerMove / pointerHide / strokeStart / strokePoint / strokeEnd /
+   clearInk — with nx/ny 0..1 normalized to the slide viewport).
 
    Inline 24×24 SVG icons only — no Font Awesome, no emoji.
    ============================================================ */
@@ -414,7 +417,7 @@ var RevealMarker = (function () {
       } else {
         liveStroke = { color: inkColor, width: inkWidth, points: [a] };
         renderStatic();
-        drawLiveHead();
+        drawLiveHead(liveStroke);
       }
       e.preventDefault();
     }
@@ -440,7 +443,7 @@ var RevealMarker = (function () {
         // skip sub-pixel jitter (author space)
         if (Math.abs(a.x - prev.x) + Math.abs(a.y - prev.y) >= 0.75) {
           liveStroke.points.push(a);
-          drawLiveSegment(prev, a);
+          drawLiveSegment(prev, a, liveStroke.color, liveStroke.width);
         }
       }
       e.preventDefault();
@@ -462,29 +465,30 @@ var RevealMarker = (function () {
   }
 
   // Incrementally draw the just-added segment (low latency) on top of
-  // the already-rendered static ink.
-  function drawLiveSegment(prevAuthor, curAuthor) {
+  // the already-rendered static ink. Colour/width are passed in so the
+  // same painters serve the local pen AND remote (presenter) strokes.
+  function drawLiveSegment(prevAuthor, curAuthor, color, width) {
     var a = toScreen(prevAuthor.x, prevAuthor.y);
     var b = toScreen(curAuthor.x, curAuthor.y);
     ctx.save();
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.strokeStyle = inkColor;
-    ctx.lineWidth = Math.max(0.5, inkWidth * vp.scale);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(0.5, width * vp.scale);
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
     ctx.stroke();
     ctx.restore();
   }
-  function drawLiveHead() {
-    if (!liveStroke) return;
-    var p = liveStroke.points[0];
+  function drawLiveHead(stroke) {
+    if (!stroke || !stroke.points.length) return;
+    var p = stroke.points[0];
     var s = toScreen(p.x, p.y);
     ctx.save();
-    ctx.fillStyle = inkColor;
+    ctx.fillStyle = stroke.color;
     ctx.beginPath();
-    ctx.arc(s.x, s.y, Math.max(0.5, inkWidth * vp.scale) / 2, 0, Math.PI * 2);
+    ctx.arc(s.x, s.y, Math.max(0.5, stroke.width * vp.scale) / 2, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
@@ -907,6 +911,79 @@ var RevealMarker = (function () {
   }
 
   /* ===========================================================
+     Remote driving — presenter console via deck-link.js.
+     nx/ny arrive 0..1 normalized to the slide viewport; multiply
+     by the author frame (vp.w × vp.h) to land in author space so
+     remote input renders EXACTLY like local input at any scale.
+     Every entry point no-ops when the plugin is inert (peek/print
+     or not yet initialised): ctx is the mounted-ness sentinel.
+  =========================================================== */
+  var remoteStroke = null;
+
+  function remoteToAuthor(nx, ny) {
+    return {
+      x: clamp(num(nx, 0), 0, 1) * vp.w,
+      y: clamp(num(ny, 0), 0, 1) * vp.h,
+    };
+  }
+
+  function setTool(name) {
+    if (!ctx) return mode;
+    if (name === MODE.LASER || name === MODE.INK || name === MODE.SPOTLIGHT) {
+      return setMode(name);
+    }
+    return setMode(MODE.IDLE); // null / unknown → tools down
+  }
+
+  function remotePointerMove(nx, ny) {
+    if (!ctx) return;
+    var a = remoteToAuthor(nx, ny);
+    if (mode === MODE.LASER) {
+      var s = toScreen(a.x, a.y);
+      pushLaserPoint(s.x, s.y); // same trail as local → identical comet
+    } else if (mode === MODE.SPOTLIGHT) {
+      spotPos = a;
+      renderStatic();
+    }
+  }
+
+  function remotePointerHide() {
+    if (!ctx) return;
+    // Laser needs no explicit hide — the comet trail vanishes on its own.
+    if (mode === MODE.SPOTLIGHT) {
+      spotPos = null;
+      renderStatic();
+    }
+  }
+
+  function remoteStrokeStart(nx, ny) {
+    if (!ctx) return;
+    if (mode !== MODE.INK) setMode(MODE.INK);
+    remoteStroke = { color: inkColor, width: inkWidth, points: [remoteToAuthor(nx, ny)] };
+    renderStatic();
+    drawLiveHead(remoteStroke);
+  }
+
+  function remoteStrokePoint(nx, ny) {
+    if (!ctx || !remoteStroke) return;
+    var a = remoteToAuthor(nx, ny);
+    var prev = remoteStroke.points[remoteStroke.points.length - 1];
+    // skip sub-pixel jitter (author space) — same gate as the local pen
+    if (Math.abs(a.x - prev.x) + Math.abs(a.y - prev.y) >= 0.75) {
+      remoteStroke.points.push(a);
+      drawLiveSegment(prev, a, remoteStroke.color, remoteStroke.width);
+    }
+  }
+
+  function remoteStrokeEnd() {
+    if (!ctx || !remoteStroke) return;
+    if (remoteStroke.points.length) commitStroke(remoteStroke);
+    remoteStroke = null;
+    renderStatic();
+    syncToolbarState();
+  }
+
+  /* ===========================================================
      Config merge
   =========================================================== */
   function mergeConfig(user) {
@@ -1014,9 +1091,20 @@ var RevealMarker = (function () {
     getInk: function () { return serialize(); },
     loadInk: loadInk,
     onStroke: null,
+    /* Remote API — the presenter console drives these via deck-link.js. */
+    setTool: setTool,
+    pointerMove: remotePointerMove,
+    pointerHide: remotePointerHide,
+    strokeStart: remoteStrokeStart,
+    strokePoint: remoteStrokePoint,
+    strokeEnd: remoteStrokeEnd,
+    clearInk: clear,
   };
   return api;
 })();
 
 // Some bundlers/importers look for a default-ish export; keep the global.
-if (typeof window !== "undefined") { window.RevealMarker = RevealMarker; }
+if (typeof window !== "undefined") {
+  window.RevealMarker = RevealMarker;
+  window.__fmntsMarker = RevealMarker; // stable handle for deck-link.js remote driving
+}

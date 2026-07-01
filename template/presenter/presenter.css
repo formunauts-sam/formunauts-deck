@@ -337,6 +337,107 @@ body.is-blank .pv-blank-veil {
   display: grid;
 }
 
+/* ---- Annotation layer over the CURRENT preview ---- */
+/* Local ink mirror. Pointer-transparent: the shell itself captures the
+   pen (the iframe below is pointer-events:none already). */
+.pv-ink-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+/* Armed tool → precise nib + no touch scrolling while drawing. */
+#pv-current-shell.is-annotating {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* ---- Annotation tool strip (docked under the current preview) ---- */
+.pv-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-top: 10px;
+  padding: 6px 8px;
+  background: linear-gradient(180deg, var(--pv-panel-2), var(--pv-panel));
+  border: 1px solid var(--pv-line);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--elevation-3);
+}
+.pv-tool {
+  appearance: none;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--pv-ink-dim);
+  font-family: var(--font-body);
+  font-size: var(--body-sm);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out-expo),
+    color var(--duration-fast) var(--ease-out-expo),
+    border-color var(--duration-fast) var(--ease-out-expo),
+    box-shadow var(--duration-fast) var(--ease-out-expo),
+    transform var(--duration-fast) var(--ease-out-expo);
+}
+.pv-tool:hover {
+  background: rgba(0, 116, 200, 0.14);
+  color: var(--pv-ink);
+}
+.pv-tool:active {
+  transform: scale(0.96);
+}
+.pv-tool:focus-visible {
+  outline: none;
+  border-color: var(--pv-accent);
+  box-shadow: 0 0 0 3px rgba(0, 116, 200, 0.4);
+}
+.pv-tool[aria-pressed="true"] {
+  background: linear-gradient(180deg, var(--pv-accent-lift), var(--pv-accent));
+  color: var(--fg-on-primary);
+  box-shadow: 0 4px 12px -4px rgba(0, 116, 200, 0.7);
+}
+.pv-tools__divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 4px 2px;
+  background: var(--pv-line);
+}
+
+/* Ink colour dots — blue default, red is the rare stopper. */
+.pv-tool-color {
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: var(--fmnts-primary);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(0, 15, 26, 0.25);
+  transition: transform var(--duration-fast) var(--ease-out-expo),
+    border-color var(--duration-fast) var(--ease-out-expo);
+}
+.pv-tool-color--red {
+  background: var(--fmnts-secondary);
+}
+.pv-tool-color:hover {
+  transform: scale(1.12);
+}
+.pv-tool-color[aria-pressed="true"] {
+  border-color: var(--pv-ink);
+  transform: scale(1.12);
+}
+.pv-tool-color:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
 /* ---- Notes column (right) ---- */
 .pv-notes-col {
   display: grid;

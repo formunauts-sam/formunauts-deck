@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Internal hub on a public host: link-shareable, but keep it out of search results -->
+  <meta name="robots" content="noindex, nofollow" />
+  <title>FORMUNAUTS — Demo Hub</title>
+
+  <!-- Brand tokens (shared with the deck) + hub styling. CHROME. -->
+  <link rel="stylesheet" href="template/brand.css" />
+  <link rel="stylesheet" href="template/hub/hub.css" />
+</head>
+<body>
+  <header class="hub-top">
+    <img class="hub-top__logo" src="assets/logos/logo-visual-type-blue.png" alt="FORMUNAUTS" />
+    <p class="hub-top__eyebrow overline">Marketing · Demo and Look Ahead</p>
+    <h1 class="hub-top__title">Demo Hub</h1>
+    <p class="hub-top__sub">Every demo deck, ready for launch. Open, share, or plan the next one.</p>
+  </header>
+
+  <main class="hub">
+    <!-- "Up next" — newest deck as hero band + the ghost plan card. hub.js fills both. -->
+    <section class="hub-next" aria-labelledby="hub-next-heading">
+      <h2 class="hub-section__label overline" id="hub-next-heading">Up next</h2>
+      <div class="hub-next__row">
+        <div id="hub-hero"></div>
+        <div id="hub-plan"></div>
+      </div>
+    </section>
+
+    <!-- Library — one card per manifest entry, newest first. hub.js fills it. -->
+    <section class="hub-library" aria-labelledby="hub-library-heading">
+      <h2 class="hub-section__label overline" id="hub-library-heading">All demos</h2>
+      <div id="hub-grid" class="hub-grid"></div>
+    </section>
+  </main>
+
+  <footer class="hub-foot">
+    <p>FORMUNAUTS · internal demo platform · decks live in decks/, the list in decks/manifest.js</p>
+  </footer>
+
+  <script type="module" src="template/hub/hub.js"></script>
+</body>
+</html>

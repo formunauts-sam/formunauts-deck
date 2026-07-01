@@ -55,12 +55,32 @@
             <span class="pv-dot pv-dot--live" aria-hidden="true"></span>
             Current
           </div>
-          <div class="pv-frame-shell">
+          <div class="pv-frame-shell" id="pv-current-shell">
             <iframe id="pv-current-frame" class="pv-frame" title="Current slide"
                     src="about:blank" tabindex="-1" scrolling="no"></iframe>
+            <canvas id="pv-ink-overlay" class="pv-ink-overlay" aria-hidden="true"></canvas>
             <div class="pv-blank-veil" aria-hidden="true">
               <span>Screen blanked</span>
             </div>
+          </div>
+
+          <!-- Annotation tool strip: remote-drives the deck's marker plugin.
+               Pointer input is captured on the preview shell above. -->
+          <div class="pv-tools" role="toolbar" aria-label="Annotation tools">
+            <button class="pv-tool" type="button" data-tool="laser"
+                    aria-pressed="false" title="Laser (L)">Laser</button>
+            <button class="pv-tool" type="button" data-tool="ink"
+                    aria-pressed="false" title="Ink (I)">Ink</button>
+            <button class="pv-tool" type="button" data-tool="spotlight"
+                    aria-pressed="false" title="Spotlight (S)">Spotlight</button>
+            <span class="pv-tools__divider" aria-hidden="true"></span>
+            <button class="pv-tool-color" type="button" data-color="#0074C8"
+                    aria-pressed="true" title="Ink colour blue" aria-label="Ink colour blue"></button>
+            <button class="pv-tool-color pv-tool-color--red" type="button" data-color="#E03B50"
+                    aria-pressed="false" title="Ink colour red" aria-label="Ink colour red"></button>
+            <span class="pv-tools__divider" aria-hidden="true"></span>
+            <button class="pv-tool pv-tool--clear" type="button" id="pv-tool-clear"
+                    title="Clear ink (C)">Clear</button>
           </div>
         </div>
 
