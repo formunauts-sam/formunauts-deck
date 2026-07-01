@@ -1,0 +1,819 @@
+/* ============================================================
+   interactive.css — in-slide interactivity engine (CHROME).
+   Never edited per-demo. Loaded AFTER deck.css.
+   ------------------------------------------------------------
+   Styles the five progressive-enhancement behaviours wired by
+   interactive.js: funnel · carousel · slider · reveal-card ·
+   count-replay. References ONLY var(--token).
+
+   Contracts honoured (see deck.css §6/§8):
+   · Motion is compositor-only (transform / opacity / clip-path).
+   · Every interactive element carries a designed :focus-visible ring.
+   · prefers-reduced-motion HARD-gates every transition/animation.
+   · body.print-pdf AND body.is-peek force the fully-visible static
+     state (mirrors deck.css's print-pdf block) so exports + presenter
+     thumbnails show MORE than the live idle slide, never a dead widget.
+
+   The engine sets data-fx-enhanced="1" once a behaviour is live; the
+   [data-fx-enhanced] attribute selector is the switch between the raw
+   static markup (always readable) and the enhanced interactive chrome.
+   ============================================================ */
+
+/* -----------------------------------------------------------
+   0. Shared a11y focus ring (all new interactive controls)
+      Never remove the outline without a visible replacement.
+----------------------------------------------------------- */
+.fx-carousel__thumb,
+.fx-carousel__nav,
+.fx-carousel__dot,
+.fx-card__summary,
+.fx-lightbox__close,
+.fx-lightbox__nav,
+.funnel__stage,
+.count-up[data-fx-replay] {
+  outline: none;
+}
+.fx-carousel__thumb:focus-visible,
+.fx-carousel__nav:focus-visible,
+.fx-carousel__dot:focus-visible,
+.fx-card__summary:focus-visible,
+.fx-lightbox__close:focus-visible,
+.fx-lightbox__nav:focus-visible,
+.funnel__stage:focus-visible,
+.fx-slider__range:focus-visible + .fx-slider__handle,
+.count-up[data-fx-replay]:focus-visible {
+  outline: 3px solid var(--border-focus);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* =========================================================================
+   1. FUNNEL — hover/focus/click a stage to reveal drop-off + tooltip.
+   The engine turns each .funnel__stage <div> into a <button> and appends
+   a drop chip + a delta ribbon + a tooltip. The base stage styling still
+   comes from deck.css (data-step colours, width steps).
+   ========================================================================= */
+.funnel[data-fx-enhanced="1"] { position: relative; }
+
+/* stage is now a real button — strip UA chrome, keep deck.css grid/colour */
+button.funnel__stage {
+  width: 100%;              /* inline --anim width still applied via style attr */
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+  transition:
+    transform var(--duration-fast) var(--ease-out-expo),
+    box-shadow var(--duration-fast) var(--ease-out-expo),
+    opacity var(--duration-normal) var(--ease-out-expo);
+}
+button.funnel__stage:hover { transform: translateX(4px); }
+button.funnel__stage:active { transform: translateX(4px) scale(0.995); }
+
+/* when one stage is engaged, the others recede (hierarchy through contrast) */
+.funnel[data-fx-active] button.funnel__stage { opacity: 0.5; }
+.funnel[data-fx-active] button.funnel__stage[data-fx-open] {
+  opacity: 1;
+  box-shadow: var(--elevation-3);
+  transform: translateX(4px);
+}
+
+/* drop-off chip appended into each stage (row 2, spans full width) */
+.funnel__drop {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-family: var(--font-display);
+  font-feature-settings: "tnum" 1;
+  font-size: var(--body-sm);
+  line-height: 1;
+  font-weight: 600;
+  /* collapse until active — grid-rows trick keeps motion compositor-cheap */
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition:
+    max-height var(--duration-normal) var(--ease-out-expo),
+    opacity var(--duration-fast) var(--ease-out-expo),
+    margin-top var(--duration-normal) var(--ease-out-expo);
+}
+button.funnel__stage[data-fx-open] .funnel__drop,
+button.funnel__stage:hover .funnel__drop,
+button.funnel__stage:focus-visible .funnel__drop {
+  max-height: 40px;
+  opacity: 1;
+}
+.funnel__stage[data-step="0"] .funnel__drop,
+.funnel__stage[data-step="1"] .funnel__drop { color: rgba(255, 255, 255, 0.92); }
+.funnel__stage[data-step="2"] .funnel__drop,
+.funnel__stage[data-step="3"] .funnel__drop { color: var(--neutral-800); }
+
+.funnel__drop-retained { opacity: 0.82; font-weight: 500; }
+.funnel__drop-sep { opacity: 0.5; }
+
+/* proportional delta ribbon between a stage and the previous one */
+.funnel__ribbon {
+  position: absolute;
+  left: 0;
+  width: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--fmnts-secondary);
+  transform: scaleY(0);
+  transform-origin: top center;
+  transition: transform var(--duration-slow) var(--ease-out-expo);
+  pointer-events: none;
+  z-index: 2;
+}
+button.funnel__stage[data-fx-open] .funnel__ribbon,
+button.funnel__stage:hover .funnel__ribbon,
+button.funnel__stage:focus-visible .funnel__ribbon {
+  transform: scaleY(1);
+}
+
+/* tooltip — step conversion + prose; sits to the right of the value */
+.funnel__tip {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + var(--space-3));
+  transform: translateY(-50%) translateX(-6px);
+  min-width: 180px;
+  max-width: 280px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-surface);
+  color: var(--fg-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elevation-3);
+  font-family: var(--font-body);
+  font-size: var(--body-sm);
+  line-height: var(--body-sm-lh);
+  font-weight: 400;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--duration-fast) var(--ease-out-expo),
+    transform var(--duration-fast) var(--ease-out-expo),
+    visibility 0s linear var(--duration-fast);
+  z-index: 5;
+  pointer-events: none;
+  white-space: normal;
+}
+.funnel__tip::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  transform: translateY(-50%);
+  border: 7px solid transparent;
+  border-right-color: var(--bg-surface);
+}
+button.funnel__stage[data-fx-open] .funnel__tip,
+button.funnel__stage:hover .funnel__tip,
+button.funnel__stage:focus-visible .funnel__tip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%) translateX(0);
+  transition-delay: 0s;
+}
+/* last two stages are narrow-right → flip the tip to the left side */
+.funnel__stage[data-step="2"] .funnel__tip,
+.funnel__stage[data-step="3"] .funnel__tip {
+  left: auto;
+  right: calc(100% + var(--space-3));
+  transform: translateY(-50%) translateX(6px);
+}
+.funnel__stage[data-step="2"] .funnel__tip::before,
+.funnel__stage[data-step="3"] .funnel__tip::before {
+  right: auto;
+  left: 100%;
+  border-right-color: transparent;
+  border-left-color: var(--bg-surface);
+}
+button.funnel__stage[data-step="2"][data-fx-open] .funnel__tip,
+button.funnel__stage[data-step="2"]:hover .funnel__tip,
+button.funnel__stage[data-step="2"]:focus-visible .funnel__tip,
+button.funnel__stage[data-step="3"][data-fx-open] .funnel__tip,
+button.funnel__stage[data-step="3"]:hover .funnel__tip,
+button.funnel__stage[data-step="3"]:focus-visible .funnel__tip {
+  transform: translateY(-50%) translateX(0);
+}
+.funnel__tip-metric {
+  display: block;
+  font-family: var(--font-display);
+  font-feature-settings: "tnum" 1;
+  font-weight: 600;
+  font-size: var(--body-md);
+  color: var(--fmnts-primary);
+  margin-bottom: var(--space-1);
+}
+
+/* =========================================================================
+   2. CAROUSEL — hero focal frame + filmstrip + dots + lightbox.
+   The engine restructures .project__thumbs into a tablist and lifts item 0
+   (the LIVE hero) into the focal slot. Static fallback = responsive grid.
+   ========================================================================= */
+.fx-carousel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+  height: 100%;
+}
+.fx-carousel__stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+/* each candidate frame stacks in the focal slot; only the current one shows */
+.fx-carousel__slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--duration-normal) var(--ease-out-expo),
+    visibility 0s linear var(--duration-normal);
+}
+.fx-carousel__slide[data-fx-current] {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+  position: relative;
+}
+.reveal .fx-carousel__stage .asset-frame {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  box-shadow: var(--elevation-3);
+}
+/* the focal frame invites the lightbox */
+.fx-carousel__focal {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  cursor: zoom-in;
+  display: flex;
+  min-height: 0;
+  height: 100%;
+}
+.fx-carousel__zoom {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: rgba(4, 15, 26, 0.6);
+  color: var(--neutral-0);
+  cursor: zoom-in;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out-expo);
+}
+.fx-carousel__focal:hover .fx-carousel__zoom,
+.fx-carousel__focal:focus-visible .fx-carousel__zoom { opacity: 1; }
+.fx-carousel__zoom svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+/* filmstrip of thumbnails */
+.fx-carousel__strip {
+  flex: 0 0 auto;
+  display: flex;
+  gap: var(--space-3);
+  align-items: stretch;
+  min-height: 0;
+  height: 96px;
+}
+.fx-carousel__thumb {
+  position: relative;
+  flex: 0 0 auto;
+  height: 100%;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    transform var(--duration-normal) var(--ease-out-expo),
+    border-color var(--duration-fast) var(--ease-out-expo),
+    box-shadow var(--duration-fast) var(--ease-out-expo);
+}
+.fx-carousel__thumb:hover { transform: translateY(-3px); }
+.fx-carousel__thumb[aria-selected="true"] {
+  border-color: var(--fmnts-primary);
+  box-shadow: var(--elevation-2);
+}
+.reveal .fx-carousel__thumb .asset-frame {
+  height: 100%;
+  width: auto;
+  max-width: none;
+  box-shadow: none;
+  margin: 0;
+}
+.fx-carousel__thumb .asset-badge { display: none; }  /* keep thumbs clean; badge shows on focal */
+
+/* dots + caption row */
+.fx-carousel__controls {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.fx-carousel__nav {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  background: var(--bg-surface);
+  color: var(--fmnts-primary);
+  cursor: pointer;
+  box-shadow: var(--elevation-1);
+  transition:
+    background var(--duration-fast) var(--ease-out-expo),
+    transform var(--duration-fast) var(--ease-out-expo);
+}
+.fx-carousel__nav:hover { background: var(--blue-50); transform: scale(1.06); }
+.fx-carousel__nav:active { transform: scale(0.96); }
+.fx-carousel__nav svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.25; }
+.fx-carousel__dots { display: flex; gap: var(--space-2); align-items: center; }
+.fx-carousel__dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--neutral-300);
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-out-expo),
+    transform var(--duration-fast) var(--ease-out-expo);
+}
+.fx-carousel__dot[aria-current="true"] { background: var(--fmnts-primary); transform: scale(1.25); }
+.fx-carousel__caption {
+  margin-left: auto;
+  font-size: var(--body-sm);
+  line-height: var(--body-sm-lh);
+  color: var(--fg-muted);
+  text-align: right;
+}
+
+/* --- lightbox — real-viewport overlay appended to .reveal --- */
+.fx-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(24px, 5vh, 72px);
+  background: rgba(4, 15, 26, 0.86);
+  opacity: 0;
+  transition: opacity var(--duration-normal) var(--ease-out-expo);
+}
+.fx-lightbox[data-fx-open] { opacity: 1; }
+.fx-lightbox__figure {
+  position: relative;
+  max-width: min(1100px, 92vw);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  transform: scale(0.96);
+  transition: transform var(--duration-normal) var(--ease-out-expo);
+}
+.fx-lightbox[data-fx-open] .fx-lightbox__figure { transform: scale(1); }
+.fx-lightbox__img {
+  max-width: 100%;
+  max-height: 76vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  box-shadow: var(--elevation-5);
+  background: var(--bg-surface);
+}
+.fx-lightbox__cap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--neutral-0);
+  font-size: var(--body-md);
+  line-height: var(--body-md-lh);
+  text-align: center;
+}
+.fx-lightbox__badge {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--overline);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+}
+.fx-lightbox__badge--success { background: var(--success-100); color: var(--success-500); }
+.fx-lightbox__badge--planned { background: var(--warning-300); color: var(--warning-700); }
+.fx-lightbox__close {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--bg-surface);
+  color: var(--fg-default);
+  cursor: pointer;
+  box-shadow: var(--elevation-3);
+}
+.fx-lightbox__close svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.25; }
+.fx-lightbox__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--neutral-0);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out-expo);
+}
+.fx-lightbox__nav:hover { background: rgba(255, 255, 255, 0.28); }
+.fx-lightbox__nav svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; }
+.fx-lightbox__nav--prev { left: clamp(8px, 3vw, 40px); }
+.fx-lightbox__nav--next { right: clamp(8px, 3vw, 40px); }
+
+/* --- carousel static fallback: a clean responsive grid at good size --- */
+.project__thumbs.fx-static-grid,
+.fx-carousel.fx-static-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: end;
+  height: 100%;
+  min-height: 0;
+}
+.reveal .fx-static-grid .asset-frame {
+  height: auto;
+  width: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* =========================================================================
+   3. SLIDER — compare (clip-path wipe) or scrub (metric scrubber).
+   A visually-hidden native <input type=range> overlays the full track, so
+   keyboard / SR / touch / scale-correct drag all come for free.
+   ========================================================================= */
+.fx-slider {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  --fx-pos: 50%;   /* driven by the range input via JS */
+}
+.fx-slider__layers { position: absolute; inset: 0; }
+.fx-slider__layer { position: absolute; inset: 0; }
+.fx-slider__layer img,
+.fx-slider__layer .asset-frame {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* the "after" layer is revealed left-of-seam via clip-path (compositor-safe) */
+.fx-slider__layer[data-fx-layer="after"] {
+  clip-path: inset(0 0 0 var(--fx-pos));
+}
+.fx-slider__seam {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--fx-pos);
+  width: 2px;
+  transform: translateX(-1px);
+  background: var(--neutral-0);
+  box-shadow: 0 0 0 1px rgba(4, 15, 26, 0.15);
+  pointer-events: none;
+}
+.fx-slider__handle {
+  position: absolute;
+  top: 50%;
+  left: var(--fx-pos);
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+  border-radius: var(--radius-pill);
+  background: var(--bg-surface);
+  box-shadow: var(--elevation-3);
+  display: grid;
+  place-items: center;
+  color: var(--fmnts-primary);
+  pointer-events: none;
+}
+.fx-slider__handle svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2.25; }
+/* the real control: full-track, transparent, on top — best a11y + touch */
+.fx-slider__range {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: ew-resize;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+.fx-slider__range::-webkit-slider-thumb { -webkit-appearance: none; width: 44px; height: 100%; }
+.fx-slider__range::-moz-range-thumb { width: 44px; height: 100%; border: 0; background: transparent; }
+.fx-slider__label {
+  position: absolute;
+  top: var(--space-4);
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--body-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: rgba(4, 15, 26, 0.62);
+  color: var(--neutral-0);
+  pointer-events: none;
+}
+.fx-slider__label--before { left: var(--space-4); }
+.fx-slider__label--after { right: var(--space-4); background: var(--fmnts-primary); }
+
+/* scrub variant — a metric read-out over the full scale */
+.fx-slider--scrub {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-5);
+  overflow: visible;
+  padding: var(--space-6);
+}
+.fx-scrub__readout {
+  font-family: var(--font-display);
+  font-feature-settings: "tnum" 1;
+  font-weight: 600;
+  font-size: var(--display-md);
+  line-height: 1;
+  color: var(--fmnts-primary);
+}
+.fx-scrub__readout small {
+  display: block;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--body-sm);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  margin-top: var(--space-2);
+}
+.fx-scrub__track {
+  position: relative;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--neutral-200);
+}
+.fx-scrub__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--fx-pos);
+  border-radius: var(--radius-pill);
+  background: var(--fmnts-primary);
+}
+.fx-scrub__scale {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-display);
+  font-feature-settings: "tnum" 1;
+  font-size: var(--body-sm);
+  color: var(--fg-muted);
+}
+
+/* =========================================================================
+   4. REVEAL-CARD — disclosure / accordion. grid-rows 0fr→1fr reveal.
+   ========================================================================= */
+.fx-card { border-radius: var(--radius-md); }
+.fx-card + .fx-card { margin-top: var(--space-3); }
+.fx-card__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--fg-default);
+  font: inherit;
+  font-weight: 600;
+  font-size: var(--body-lg);
+  line-height: var(--body-lg-lh);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--elevation-1);
+  transition:
+    background var(--duration-fast) var(--ease-out-expo),
+    box-shadow var(--duration-fast) var(--ease-out-expo);
+}
+.slide--dark .fx-card__summary,
+.slide--blue .fx-card__summary {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.92);
+}
+.fx-card__summary:hover { background: var(--blue-50); }
+.slide--dark .fx-card__summary:hover,
+.slide--blue .fx-card__summary:hover { background: rgba(255, 255, 255, 0.09); }
+.fx-card__chevron {
+  margin-left: auto;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  color: var(--fmnts-primary);
+  transition: transform var(--duration-normal) var(--ease-out-expo);
+}
+.slide--dark .fx-card__chevron,
+.slide--blue .fx-card__chevron { color: var(--fmnts-primary-50); }
+.fx-card__chevron svg { width: 100%; height: 100%; stroke: currentColor; fill: none; stroke-width: 2.5; }
+.fx-card__summary[aria-expanded="true"] .fx-card__chevron { transform: rotate(180deg); }
+
+.fx-card__detail {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--duration-normal) var(--ease-out-expo);
+}
+.fx-card__detail > .fx-card__detail-inner { overflow: hidden; }
+.fx-card__summary[aria-expanded="true"] + .fx-card__detail { grid-template-rows: 1fr; }
+.fx-card__detail-inner {
+  padding: var(--space-4) var(--space-5) var(--space-2);
+  font-size: var(--body-md);
+  line-height: var(--body-md-lh);
+  color: var(--fg-muted);
+}
+.slide--dark .fx-card__detail-inner,
+.slide--blue .fx-card__detail-inner { color: rgba(255, 255, 255, 0.72); }
+
+/* =========================================================================
+   5. COUNT-REPLAY — faint "↺" affordance on hover; click/Enter re-runs.
+   The numeral itself is upgraded to a button by the engine.
+   ========================================================================= */
+button.count-up[data-fx-replay] {
+  position: relative;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.count-up[data-fx-replay]::after {
+  content: "↺";
+  position: absolute;
+  top: -0.35em;
+  right: -0.7em;
+  font-family: var(--font-body);
+  font-size: 0.42em;
+  line-height: 1;
+  color: var(--fmnts-primary);
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out-expo);
+  pointer-events: none;
+}
+.count-up[data-fx-replay]:hover::after,
+.count-up[data-fx-replay]:focus-visible::after { opacity: 0.7; }
+.funnel__value.count-up[data-fx-replay]::after,
+.slide--dark .count-up[data-fx-replay]::after,
+.slide--blue .count-up[data-fx-replay]::after { color: var(--fmnts-primary-50); }
+
+/* =========================================================================
+   6. REDUCED-MOTION — HARD gate. Everything jumps to its end state.
+   Interactions still work; only the tweening is removed.
+   ========================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  button.funnel__stage,
+  .funnel__drop,
+  .funnel__ribbon,
+  .funnel__tip,
+  .fx-carousel__slide,
+  .fx-carousel__thumb,
+  .fx-carousel__nav,
+  .fx-carousel__dot,
+  .fx-carousel__zoom,
+  .fx-lightbox,
+  .fx-lightbox__figure,
+  .fx-card__summary,
+  .fx-card__chevron,
+  .fx-card__detail,
+  .fx-slider__layer,
+  .fx-slider__seam,
+  .fx-slider__handle,
+  .count-up[data-fx-replay]::after {
+    transition: none !important;
+    animation: none !important;
+  }
+  button.funnel__stage:hover,
+  button.funnel__stage:active { transform: none; }
+}
+
+/* =========================================================================
+   7. STATIC / PDF / PEEK EXPORT — force the fully-visible state.
+   Mirrors deck.css §8. The engine ALSO renders the static markup directly
+   in these modes (STATIC()==true), but these rules are a CSS-level belt-and
+   -braces guarantee: even if a component was enhanced live and THEN printed,
+   it degrades to a readable, fully-open layout — never a dead widget.
+   ========================================================================= */
+
+/* Lightbox + zoom + laser-style chrome never appear in a static export */
+body.print-pdf .fx-lightbox,
+body.is-peek .fx-lightbox,
+body.print-pdf .fx-carousel__zoom,
+body.is-peek .fx-carousel__zoom {
+  display: none !important;
+}
+
+/* Funnel: every drop chip + tooltip open, no dimming, no interaction chrome */
+body.print-pdf .funnel[data-fx-active] button.funnel__stage,
+body.is-peek .funnel[data-fx-active] button.funnel__stage { opacity: 1 !important; }
+body.print-pdf .funnel__drop,
+body.is-peek .funnel__drop {
+  max-height: none !important;
+  opacity: 1 !important;
+  overflow: visible;
+}
+body.print-pdf .funnel__ribbon,
+body.is-peek .funnel__ribbon { transform: scaleY(1) !important; }
+/* tooltips inline in print would overlap — the drop chip already carries the
+   numbers, so suppress the floating tip in static exports */
+body.print-pdf .funnel__tip,
+body.is-peek .funnel__tip { display: none !important; }
+body.print-pdf button.funnel__stage,
+body.is-peek button.funnel__stage { transform: none !important; }
+
+/* Carousel: if it somehow enhanced before print, reveal every slide as a grid */
+body.print-pdf .fx-carousel__stage,
+body.is-peek .fx-carousel__stage {
+  position: static;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+body.print-pdf .fx-carousel__slide,
+body.is-peek .fx-carousel__slide {
+  position: static !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+body.print-pdf .fx-carousel__strip,
+body.print-pdf .fx-carousel__controls,
+body.is-peek .fx-carousel__strip,
+body.is-peek .fx-carousel__controls {
+  display: none !important;
+}
+
+/* Reveal-cards: all details open, chevrons pointing open */
+body.print-pdf .fx-card__detail,
+body.is-peek .fx-card__detail { grid-template-rows: 1fr !important; }
+body.print-pdf .fx-card__chevron,
+body.is-peek .fx-card__chevron { transform: rotate(180deg) !important; }
+
+/* Slider: pin the "after" fully shown, keep both labels + seam visible */
+body.print-pdf .fx-slider,
+body.is-peek .fx-slider { --fx-pos: 0% !important; }
+body.print-pdf .fx-slider__range,
+body.is-peek .fx-slider__range { display: none !important; }
+body.print-pdf .fx-scrub__fill,
+body.is-peek .fx-scrub__fill { /* default stop already applied via --fx-pos inline */ }
+
+/* Count-replay affordance never prints */
+body.print-pdf .count-up[data-fx-replay]::after,
+body.is-peek .count-up[data-fx-replay]::after { display: none !important; }

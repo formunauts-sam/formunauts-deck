@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Presenter console: private companion window, never indexed -->
+  <meta name="robots" content="noindex, nofollow" />
+  <title>FORMUNAUTS — Presenter</title>
+
+  <!-- Brand tokens (shared with the deck) + console styling. CHROME. -->
+  <link rel="stylesheet" href="template/brand.css" />
+  <link rel="stylesheet" href="template/presenter/presenter.css" />
+</head>
+<body class="is-disconnected">
+  <div class="pv">
+
+    <!-- ============ HEADER: clocks, pacing, index ============ -->
+    <header class="pv-header">
+      <div class="pv-brand">
+        <span class="pv-brand__mark" aria-hidden="true"></span>
+        <span class="pv-brand__label">Presenter</span>
+      </div>
+
+      <div class="pv-clocks">
+        <div class="pv-clock pv-clock--elapsed">
+          <span class="pv-clock__value" id="pv-elapsed">0:00</span>
+          <span class="pv-clock__label">Elapsed</span>
+        </div>
+        <button class="pv-reset" type="button" id="pv-reset-timer"
+                title="Reset timer (R)" aria-label="Reset timer">↺</button>
+        <div class="pv-clock pv-clock--wall">
+          <span class="pv-clock__value" id="pv-wall">--:--</span>
+          <span class="pv-clock__label">Now</span>
+        </div>
+      </div>
+
+      <div class="pv-pace-wrap" title="Pace on this slide vs its budget">
+        <span class="pv-pace" id="pv-pace" data-state="ok">0:00 / 0:45</span>
+        <span class="pv-pace-track"><span class="pv-pace-fill" id="pv-pace-fill" data-state="ok"></span></span>
+      </div>
+
+      <div class="pv-index-wrap">
+        <span class="pv-index" id="pv-index">01</span>
+        <span class="pv-index-sep">/</span>
+        <span class="pv-index-total" id="pv-index-total">00</span>
+      </div>
+    </header>
+
+    <!-- ============ MAIN: previews + notes ============ -->
+    <main class="pv-main">
+      <!-- LEFT: current slide (dominant) + next preview -->
+      <section class="pv-stage" aria-label="Slide previews">
+        <div class="pv-current">
+          <div class="pv-panel-label">
+            <span class="pv-dot pv-dot--live" aria-hidden="true"></span>
+            Current
+          </div>
+          <div class="pv-frame-shell">
+            <iframe id="pv-current-frame" class="pv-frame" title="Current slide"
+                    src="about:blank" tabindex="-1" scrolling="no"></iframe>
+            <div class="pv-blank-veil" aria-hidden="true">
+              <span>Screen blanked</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pv-next">
+          <div class="pv-panel-label">
+            <span class="pv-dot pv-dot--next" aria-hidden="true"></span>
+            Next <span class="pv-next-name" id="pv-next-label"></span>
+          </div>
+          <div class="pv-frame-shell pv-frame-shell--next">
+            <iframe id="pv-next-frame" class="pv-frame" title="Next slide"
+                    src="about:blank" tabindex="-1" scrolling="no"></iframe>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT: speaker notes (big, scrollable) -->
+      <section class="pv-notes-col" aria-label="Speaker notes">
+        <div class="pv-notes-head">
+          <p class="pv-eyebrow" id="pv-eyebrow"></p>
+          <h1 class="pv-title" id="pv-title">Waiting for the deck…</h1>
+        </div>
+        <div class="pv-notes" id="pv-notes" tabindex="0">
+          <p class="pv-note-empty">Open the deck window to sync speaker notes.</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- ============ FOOTER: controls ============ -->
+    <footer class="pv-controls">
+      <button class="pv-btn pv-btn--nav" type="button" id="pv-prev" title="Previous (←)">
+        <span class="pv-btn__glyph" aria-hidden="true">‹</span>
+        <span class="pv-btn__text">Prev</span>
+      </button>
+
+      <button class="pv-btn pv-btn--jump" type="button" id="pv-jump-toggle"
+              aria-expanded="false" aria-controls="pv-jump" title="Jump to slide (G)">
+        <span class="pv-btn__glyph" aria-hidden="true">☰</span>
+        <span class="pv-btn__text">Slides</span>
+      </button>
+
+      <button class="pv-btn pv-btn--blank" type="button" id="pv-blank"
+              aria-pressed="false" title="Blank the shared screen (B)">
+        <span class="pv-btn__glyph" aria-hidden="true">◼</span>
+        <span class="pv-btn__text">Blank</span>
+      </button>
+
+      <button class="pv-btn pv-btn--nav pv-btn--primary" type="button" id="pv-next" title="Next (→ / Space)">
+        <span class="pv-btn__text">Next</span>
+        <span class="pv-btn__glyph" aria-hidden="true">›</span>
+      </button>
+    </footer>
+
+    <!-- Slide-out jump list -->
+    <aside class="pv-jump" id="pv-jump" aria-label="Jump to slide">
+      <div class="pv-jump-head">
+        <span>Jump to slide</span>
+        <button class="pv-jump-close" type="button"
+                onclick="document.getElementById('pv-jump').classList.remove('is-open')"
+                aria-label="Close">✕</button>
+      </div>
+      <ul class="pv-jump-list" id="pv-jump-list"></ul>
+    </aside>
+
+    <!-- Connection banner (shown when the deck window is not detected) -->
+    <div class="pv-banner" role="status">
+      <span class="pv-banner__dot" aria-hidden="true"></span>
+      <span class="pv-banner__text" id="pv-status">Deck window not detected.</span>
+      <button class="pv-banner__btn" type="button" id="pv-reconnect">Reconnect</button>
+      <a class="pv-banner__link" id="pv-open-deck" href="index.html" target="_blank" rel="noopener">Open deck ↗</a>
+    </div>
+  </div>
+
+  <script type="module" src="template/presenter/presenter.js"></script>
+</body>
+</html>

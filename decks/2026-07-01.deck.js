@@ -78,6 +78,7 @@ export const deck = {
         { src: "reinhard-planned-4.png", tag: "PLANNED" },
       ],
       band: { src: "reinhard-linkedin-banner.png" },
+      cadence: "new post every week",
       notes: "Ok nice — the ambassador postings are live. Reinhard's intro post is out, that's the big one on the left, and the engagement is really good so far. We optimised his whole LinkedIn profile for the ambassador content — you can see the banner along the bottom. And from now there's a new post every Tuesday at half nine; on the right are the next ones already prepared. Any questions on this?",
     },
 
@@ -132,24 +133,22 @@ export const deck = {
 
     /* 09 ---------------------------------------------------- */
     {
-      id: "strategy-internal", archetype: "overviewBullets", variant: "quiet", chrome: "dark",
-      eyebrow: "INTERNAL · CONTEXT", headline: "Behind the scenes",
-      columns: [
-        {
-          title: "Strategy & web",
-          items: [
-            "Q2→Q3 OKRs done", "UK inhouse page started",
-            "Key Value page in progress → website focus this sprint",
-            "job-posting target groups set",
-          ],
-        },
-        {
-          title: "Data & ops",
-          items: [
-            "SSOT first steps with Elias (customer-first)",
-            "Klausur kickoff done", "APP NPS newsletter sent", "asset cleanup underway",
-          ],
-        },
+      id: "strategy-internal", archetype: "statusBoard",
+      eyebrow: "INTERNAL · THE ENGINE", headline: "Foundations under the highlights",
+      lead: "The operational work that makes the campaigns above repeatable.",
+      groups: [
+        { title: "Strategy & web", items: [
+          { t: "Q2 → Q3 OKRs", state: "done" },
+          { t: "UK inhouse page", state: "active" },
+          { t: "Key Value page → website focus", state: "active" },
+          { t: "Job-posting target groups", state: "done" },
+        ]},
+        { title: "Data & ops", items: [
+          { t: "SSOT first steps with Elias", state: "active" },
+          { t: "Klausur kickoff", state: "done" },
+          { t: "APP NPS newsletter", state: "done" },
+          { t: "Asset cleanup", state: "next" },
+        ]},
       ],
       notes: "Then the internal stuff, quickly. On strategy and web: I closed out the Q2 OKRs and built the Q3 ones, started the UK inhouse page, and the Key Value page is in progress — so that's the website focus this sprint. I also set the target groups for our job postings. On data and ops: first steps on the SSOT tool with Elias — really thinking about what we need first, customer-focused — the Klausur kickoff is done, the APP NPS newsletter went out, and asset cleanup is underway. I won't go deep here, but shout if you want detail on any of it.",
     },

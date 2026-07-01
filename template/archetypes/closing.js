@@ -5,17 +5,16 @@
 import { esc, orbit } from "./_shared.js";
 
 export function closing(slide, ctx) {
-  const rocket = ctx.logo("formunauts_visual_white.svg");
-  const wordmark = ctx.logo("logo-type-white.png");
+  const claim = ctx.logo("logo-claim-wide-white.png");   // white claim lockup on blue
 
   return `
-    <img class="rocket-mark rocket-mark--tl" src="${esc(rocket)}" alt="" aria-hidden="true">
     ${orbit("tl")}
 
     <h2 class="closing__statement anim" style="--anim-step:0">${esc(slide.statement || "")}</h2>
     <p class="closing__sub anim" style="--anim-step:1">${esc(slide.sub || "")}</p>
 
-    <img class="closing__wordmark" src="${esc(wordmark)}" alt="FORMUNAUTS" height="28">
-    <p class="closing__site anim" style="--anim-step:2">${esc(slide.site || "")}</p>
+    <img class="closing__claim anim" style="--anim-step:2" src="${esc(claim)}"
+         alt="FORMUNAUTS — Fundraising Space Navigators" width="300">
+    <p class="closing__site anim" style="--anim-step:3">${esc(slide.site || "")}</p>
   `;
 }

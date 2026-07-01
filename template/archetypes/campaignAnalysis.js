@@ -16,7 +16,13 @@ export function campaignAnalysis(slide) {
     const isNum = typeof s.value === "number";
     const valueAttr = isNum ? ` data-count-to="${s.value}"` : "";
     const valueTxt = isNum ? "0" : esc(s.value);
-    return `<div class="funnel__stage anim" data-step="${i}" style="--anim-step:${i + 3}; width:${width.toFixed(1)}%">
+    // data-fx-* → interactive.js funnel(): hover/click a stage reveals drop-off + retention.
+    // All numbers stay declarative in the deck data; the engine computes the chips.
+    const prev = funnel[i - 1];
+    const fx = ` data-fx-stage data-fx-value="${isNum ? s.value : esc(s.value)}"`
+      + (prev && typeof prev.value === "number" ? ` data-fx-prev="${prev.value}"` : "")
+      + (s.tip ? ` data-fx-tip="${esc(s.tip)}"` : "");
+    return `<div class="funnel__stage anim" data-step="${i}"${fx} style="--anim-step:${i + 3}; width:${width.toFixed(1)}%">
         <span class="funnel__label">${esc(s.label)}${note}</span>
         <span class="funnel__value count-up"${valueAttr}>${valueTxt}</span>
       </div>`;
@@ -35,6 +41,6 @@ export function campaignAnalysis(slide) {
         <p class="analysis__caption anim" style="--anim-step:7">Charities engaged this cycle. The blue ramp shows conversion at each step; hot leads flagged in red.</p>
         <div class="pills">${pills}</div>
       </div>
-      <div class="funnel">${stages}</div>
+      <div class="funnel" data-fx="funnel">${stages}</div>
     </div>`;
 }

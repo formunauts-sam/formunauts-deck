@@ -15,7 +15,7 @@ const COUNT_MS = 900;
 /* ease-out-expo, matches --ease-out-expo */
 function easeOutExpo(t) { return t === 1 ? 1 : 1 - Math.pow(2, -10 * t); }
 
-function runCountUp(el) {
+export function runCountUp(el) {
   const target = Number(el.getAttribute("data-count-to"));
   if (!Number.isFinite(target)) return;
 

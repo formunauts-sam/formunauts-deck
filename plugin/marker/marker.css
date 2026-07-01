@@ -1,0 +1,219 @@
+/* ============================================================
+   FORMUNAUTS Demo-Deck — plugin/marker/marker.css
+   ------------------------------------------------------------
+   CHROME. Never edited per-demo.
+   Styles for RevealMarker: full-viewport annotation canvas +
+   spotlight + auto-hiding on-brand toolbar (inline SVG icons).
+   Token-driven — references ONLY var(--token) from brand.css.
+   Print + reduced-motion guards at the bottom.
+   ============================================================ */
+
+/* ---------------------------------------------------------------
+   Overlay canvas — pinned to the real viewport (NOT transformed
+   with the deck). Coordinate conversion happens in plugin.js via
+   Reveal.getScale() + getSlidesElement().getBoundingClientRect().
+   Default: transparent to pointer events so laser/spotlight let
+   the presenter still click slide UI. INK mode flips this to auto.
+--------------------------------------------------------------- */
+.marker-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 55;                 /* above slides, below the toolbar (60) */
+  pointer-events: none;
+  touch-action: none;
+  background: transparent;
+}
+.marker-overlay.is-drawable {
+  pointer-events: auto;
+}
+/* Crosshair while inking so the nib is precise; grab while spotlighting */
+.reveal.marker-mode-ink   .marker-overlay.is-drawable { cursor: crosshair; }
+.reveal.marker-mode-spotlight .marker-overlay { cursor: none; }
+
+/* ---------------------------------------------------------------
+   Toolbar — pill container, bottom-center, above customcontrols.
+   Auto-hides after idle (class toggled from plugin.js).
+--------------------------------------------------------------- */
+.marker-toolbar {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%) translateY(0);
+  z-index: 60;
+
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--elevation-4);
+
+  opacity: 1;
+  transition:
+    opacity var(--duration-normal) var(--ease-out-expo),
+    transform var(--duration-normal) var(--ease-out-expo);
+  -webkit-user-select: none;
+  user-select: none;
+}
+.marker-toolbar[hidden] { display: none; }
+
+/* Idle / hidden state — slide down + fade, never occupies focus */
+.marker-toolbar.is-hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(24px);
+  pointer-events: none;
+}
+
+/* Grouping dividers */
+.marker-toolbar__divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 4px 4px;
+  background: var(--border-subtle);
+}
+
+/* ---------------------------------------------------------------
+   Buttons (36×36, inline SVG). Designed hover / active / focus.
+--------------------------------------------------------------- */
+.marker-btn {
+  --_ink: var(--fg-muted);
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--_ink);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out-expo),
+    color var(--duration-fast) var(--ease-out-expo),
+    transform var(--duration-fast) var(--ease-out-expo);
+}
+.marker-btn svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+  pointer-events: none;
+}
+.marker-btn:hover {
+  background: var(--blue-50);
+  color: var(--fmnts-primary);
+}
+.marker-btn:active {
+  transform: scale(0.94);
+}
+.marker-btn[aria-pressed="true"] {
+  background: var(--fmnts-primary);
+  color: var(--fg-on-primary);
+}
+.marker-btn:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+.marker-btn[disabled] {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------
+   Colour + width swatch controls inside the toolbar.
+--------------------------------------------------------------- */
+.marker-swatches,
+.marker-widths {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 2px;
+}
+
+.marker-swatch {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(0, 15, 26, 0.12);
+  transition:
+    transform var(--duration-fast) var(--ease-out-expo),
+    border-color var(--duration-fast) var(--ease-out-expo);
+}
+.marker-swatch:hover { transform: scale(1.12); }
+.marker-swatch[aria-pressed="true"] {
+  border-color: var(--fg-default);
+  transform: scale(1.12);
+}
+.marker-swatch:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.marker-width {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  color: var(--fg-muted);
+  transition: background-color var(--duration-fast) var(--ease-out-expo);
+}
+.marker-width:hover { background: var(--blue-50); }
+.marker-width[aria-pressed="true"] { background: var(--neutral-150); color: var(--fg-default); }
+.marker-width:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+.marker-width__dot {
+  border-radius: var(--radius-pill);
+  background: currentColor;
+}
+
+/* ---------------------------------------------------------------
+   Reduced motion — no comet melt animation (plugin swaps laser for
+   a plain dot), toolbar shows/hides instantly.
+--------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .marker-toolbar,
+  .marker-btn,
+  .marker-swatch,
+  .marker-width { transition: none; }
+  .marker-toolbar.is-hidden { transform: translateX(-50%); }
+}
+
+/* ---------------------------------------------------------------
+   Print / PDF export — annotation chrome NEVER appears in exports.
+   (index.html also adds body.print-pdf; both selectors covered.)
+--------------------------------------------------------------- */
+@media print {
+  .marker-overlay,
+  .marker-toolbar { display: none !important; }
+}
+body.print-pdf .marker-overlay,
+body.print-pdf .marker-toolbar { display: none !important; }
+
+/* Presenter "peek" thumbnails (index.html adds body.is-peek) —
+   keep previews calm: no draw layer, no toolbar. */
+body.is-peek .marker-overlay,
+body.is-peek .marker-toolbar { display: none !important; }

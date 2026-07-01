@@ -18,7 +18,7 @@
 .reveal .slides { text-align: left; }               /* Swiss left edge, never centered */
 .reveal .slides section { padding: 0; height: 720px; width: 1280px; box-sizing: border-box; }
 .reveal .slides section > * { box-sizing: border-box; }
-.reveal .backgrounds { background: var(--bg-base); } /* neutral base behind everything */
+.reveal .backgrounds { background: var(--bg-surface); } /* clean white base behind everything */
 .reveal, .reveal .slides { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
 /* Kill reveal default heading transforms/margins — brand type owns it */
@@ -33,8 +33,8 @@
 
 /* Chrome-color surface fills (set by render.js as a class on <section>) */
 .slide { position: relative; width: 1280px; height: 720px; overflow: hidden; }
-.slide--light   { background: var(--bg-base);    color: var(--fg-default); }
-.slide--muted   { background: var(--bg-muted);   color: var(--fg-default); }
+.slide--light   { background: var(--bg-surface); color: var(--fg-default); }
+.slide--muted   { background: var(--blue-50);    color: var(--fg-default); }
 .slide--dark    { background: var(--bg-inverse); color: var(--fg-inverse); }
 .slide--blue    { color: var(--fg-inverse);
   background: linear-gradient(135deg, var(--fmnts-primary-dark) 0%, var(--fmnts-primary) 100%); }
@@ -84,10 +84,12 @@
 /* Footer chrome */
 .footer-logo { position: absolute; left: 80px; bottom: 64px; height: 20px; width: auto; }
 .page-index {
-  position: absolute; right: 80px; bottom: 64px;
+  position: absolute; right: 80px; bottom: 60px;
   font-family: var(--font-display); font-feature-settings: "tnum" 1;
-  font-size: var(--body-sm); color: var(--fg-subtle); text-align: right;
+  font-size: var(--body-sm); color: var(--fg-subtle); text-align: right; letter-spacing: 0.02em;
 }
+.page-index b { color: var(--fmnts-primary); font-weight: 600; }
+.slide--dark .page-index b, .slide--blue .page-index b { color: var(--fmnts-primary-50); }
 .slide--dark .page-index, .slide--blue .page-index { color: rgba(255,255,255,0.55); }
 
 /* -----------------------------------------------------------
@@ -106,7 +108,7 @@
 .asset-frame {
   position: relative; width: 100%; overflow: hidden;
   border-radius: var(--radius-lg);
-  background: var(--neutral-100);        /* any pad reads as an intentional mat */
+  background: var(--blue-50);            /* letterbox mat reads as a deliberate cool mat, not grey */
   box-shadow: var(--elevation-2);        /* frame shadow — no border on the same box */
 }
 .asset-frame--floating { box-shadow: var(--elevation-3); } /* floating on blue/dark */
@@ -158,23 +160,29 @@
 ----------------------------------------------------------- */
 .rocket-mark {
   position: absolute; pointer-events: none; user-select: none;
-  opacity: 0.10; height: 560px; width: auto;
+  height: 300px; width: 300px;                 /* SVG is 1:1; was 560px & clipped */
+  opacity: 0.92;                                /* a real object, not a 0.10 ghost */
+  filter: drop-shadow(0 24px 60px rgba(0,15,26,0.35));
+  z-index: 0;
 }
-.rocket-mark--tr { top: -120px; right: -110px; }   /* cover: bleed off top-right */
-.rocket-mark--tl { top: -120px; left: -110px; transform: scaleX(-1); } /* closing: mirror to top-left */
+.rocket-mark--tr {                              /* cover: complete rocket, only exhaust bleeds the corner */
+  right: 40px; bottom: -46px; top: auto; left: auto;
+  transform: rotate(-4deg);
+}
+/* closing paints NO rocket (see closing.js) */
 .rocket-watermark {
-  position: absolute; right: 40px; bottom: 40px; height: 240px; width: auto;
-  opacity: 0.06; pointer-events: none; user-select: none;
+  position: absolute; right: 48px; bottom: 44px; height: 200px; width: 200px;
+  opacity: 0.05; pointer-events: none; user-select: none;
 }
 
 /* Orbital rings — thin SVG arcs sweeping a corner */
 .orbit { position: absolute; pointer-events: none; overflow: visible; }
-.orbit--br { right: -220px; bottom: -260px; width: 760px; height: 760px; }
-.orbit--tl { left: -220px;  top: -260px;    width: 760px; height: 760px; transform: rotate(180deg); }
+.orbit--br { right: -180px; bottom: -220px; width: 820px; height: 820px; }
+.orbit--tl { left: -200px;  top: -240px;    width: 760px; height: 760px; transform: rotate(180deg); }
 .orbit circle { fill: none; }
-.orbit .ring-1 { stroke: rgba(255,255,255,0.28); stroke-width: 1.5; }
-.orbit .ring-2 { stroke: var(--fmnts-primary-25); stroke-width: 1.25; opacity: 0.55; }
-.orbit .ring-dot { fill: rgba(255,255,255,0.85); stroke: none; }
+.orbit .ring-1 { stroke: rgba(255,255,255,0.34); stroke-width: 1.5; }
+.orbit .ring-2 { stroke: rgba(255,255,255,0.16); stroke-width: 1.25; }
+.orbit .ring-dot { fill: rgba(255,255,255,0.95); stroke: none; }
 
 /* Ring drift: very slow, ≤2°, transform only (gated off in reduced-motion via anim.js) */
 @keyframes ring-drift { from { transform: rotate(0deg); } to { transform: rotate(2deg); } }
@@ -188,15 +196,15 @@
 /* -----------------------------------------------------------
    COVER (slide 01)
 ----------------------------------------------------------- */
-.cover__claim { position: absolute; left: 80px; top: 64px; height: 44px; width: auto; }
+.cover__claim { position: absolute; left: 80px; top: 72px; width: 320px; height: auto; }
 .cover__eyebrow {
-  position: absolute; left: 80px; top: 300px;
+  position: absolute; left: 80px; top: 330px;
   font-family: var(--font-body); font-weight: 600; text-transform: uppercase;
   font-size: var(--overline); line-height: var(--overline-lh); letter-spacing: 0.30em;
   color: rgba(255,255,255,0.70);
 }
 .cover__headline {
-  position: absolute; left: 80px; top: 336px; right: 200px;
+  position: absolute; left: 80px; top: 366px; right: 200px;
   font-family: var(--font-body); font-weight: 800;
   font-size: var(--display-xl); line-height: var(--display-xl-lh); letter-spacing: -0.02em;
   color: var(--fg-inverse); max-width: 940px;
@@ -327,28 +335,32 @@
    so aspect-ratio wins and the tall portrait never clips; the banner is
    capped so its 4:1 stays a slim strip. Everything contains, never crops. */
 .project--hero {
-  /* hero spans BOTH rows on the left → the LIVE post is the tallest, dominant object.
-     Planned thumbs + banner stack in a shorter right column, clearly smaller. */
+  /* LIVE post spans both rows (dominant); PLANNED cards are a browsable ~300px row
+     top-right; the profile banner is a labeled 84px strip bottom-right. */
   display: grid;
-  grid-template-columns: minmax(0, 3.4fr) minmax(0, 6.6fr);
+  grid-template-columns: minmax(0, 4.2fr) minmax(0, 5.8fr);
   grid-template-rows: 1fr auto;
-  grid-template-areas: "hero thumbs" "hero band";
-  column-gap: 44px; row-gap: 20px; align-items: start; min-height: 0;
+  grid-template-areas: "hero carousel" "hero profile";
+  column-gap: 40px; row-gap: 18px; align-items: stretch; min-height: 0;
 }
-.project__hero  { grid-area: hero; min-height: 0; height: 100%; display: flex; align-items: flex-start; justify-content: flex-start; }
-/* height drives the frame; aspect-ratio computes width → the tall portrait fills full height, no clip */
-.reveal .project--hero .project__hero .asset-frame { height: 100%; width: auto; max-width: 100%; }
-/* planned thumbs — deliberately smaller: a short capped row so they never rival the hero */
-.project__thumbs {
-  grid-area: thumbs; min-height: 0; height: 150px;
-  display: flex; gap: 16px; align-items: flex-start; justify-content: flex-start;
-}
-.project__thumb { min-height: 0; height: 100%; display: flex; }
+.project__hero { grid-area: hero; min-height: 0; height: 100%; display: flex; align-items: stretch; justify-content: flex-start; }
+.reveal .project--hero .project__hero .asset-frame { height: 100%; width: auto; max-width: 100%; box-shadow: var(--elevation-3); }
+.project__thumbs { grid-area: carousel; min-height: 0; display: flex; gap: 16px; align-items: flex-start; overflow: hidden; }
+.project__thumb { min-height: 0; height: 300px; flex: 0 0 auto; scroll-snap-align: start; transition: transform var(--duration-normal) var(--ease-out-expo); }
 .reveal .project--hero .project__thumb .asset-frame { height: 100%; width: auto; max-width: 100%; }
-.project__thumb .caption { text-align: center; }
-/* banner — slim strip, flush-left under the thumbs (right column, not floating centre) */
-.project__band { grid-area: band; align-self: end; display: flex; justify-content: flex-start; min-width: 0; }
-.reveal .project--hero .project__band .asset-frame { height: 70px; width: auto; max-width: 100%; }
+.project__thumb:hover { transform: translateY(-4px); }
+.project__band { grid-area: profile; align-self: end; display: flex; align-items: center; gap: var(--space-4); min-width: 0; }
+.reveal .project--hero .project__band .asset-frame { height: 84px; width: auto; max-width: 100%; }
+.project__band .caption { margin: 0; }
+.hero-cadence { position: absolute; right: 0; top: -40px; }
+
+/* Ambassador gallery (interactive carousel) — fills the content region so the
+   focal + thumbnail strip size correctly; static/peek fallback = a clean grid. */
+.project--gallery { position: absolute; inset: 236px 80px 104px 80px; display: flex; flex-direction: column; gap: 14px; }
+.project__gallery { flex: 1 1 auto; min-height: 0; }
+.project--gallery .project__band { flex: 0 0 auto; display: flex; align-items: center; }
+.reveal .project--gallery .project__band .asset-frame { height: 68px; width: auto; max-width: 100%; }
+.project--gallery .hero-cadence { position: static; align-self: flex-start; }
 
 /* --- layout: single (slides 05 06) --- */
 .project--single { display: grid; grid-template-columns: 1fr; column-gap: 56px; align-items: center; }
@@ -473,7 +485,7 @@
   font-family: var(--font-display); font-feature-settings: "tnum" 1;
   font-size: var(--body-sm); color: rgba(255,255,255,0.70);
 }
-.closing__wordmark { position: absolute; left: 80px; bottom: 56px; height: 28px; width: auto; opacity: 0.9; }
+.closing__claim { position: absolute; left: 80px; bottom: 88px; width: 300px; height: auto; opacity: 0.96; }
 
 /* =========================================================================
    §6 MOTION — auto-playing anchor-stack stagger (NO clicks) + reduced-motion.
@@ -513,7 +525,7 @@
    Hidden in speaker view + print/pdf.
    ========================================================================= */
 .present-btn {
-  position: fixed; right: 16px; bottom: 14px; z-index: 40;
+  position: fixed; right: 16px; bottom: 14px; z-index: 60;   /* above the ink canvas (z-55) */
   font-family: var(--font-body); font-weight: 600; font-size: var(--body-sm);
   color: var(--fg-inverse); background: var(--fmnts-primary);
   border: 0; border-radius: var(--radius-pill); padding: 8px 16px; cursor: pointer;
@@ -544,8 +556,12 @@
 .slide .overview, .slide .nextsteps, .slide > .footer-logo, .slide > .page-index { position: absolute; z-index: 1; }
 .slide .analysis, .slide .project, .slide .process, .slide .overview, .slide .nextsteps { z-index: 1; }
 
-/* Annotation / draw controls: clear of the bottom-left logo — tuck bottom-right */
-.reveal .customcontrols { left: auto !important; right: 12px !important; bottom: 50px !important; top: auto !important; }
+/* Annotation / draw controls: the plugin renders #customcontrols (id, no class) and its
+   own stylesheet loads after deck.css — so target the id at higher specificity, incl. its <ul>. */
+.reveal #customcontrols, .reveal #customcontrols > ul {
+  left: auto !important; right: 12px !important; bottom: 92px !important; top: auto !important;
+}
+.reveal #customcontrols { z-index: 60; }   /* above the ink canvas (z-55) so it stays clickable */
 
 /* =========================================================================
    §8 STATIC / PDF EXPORT — content must be visible without reveal's .present
@@ -554,3 +570,48 @@
    ========================================================================= */
 body.print-pdf .reveal .slides section .anim { opacity: 1 !important; animation: none !important; transform: none !important; }
 body.print-pdf .orbit.is-drifting { animation: none !important; }
+
+/* =========================================================================
+   §9 STATUS BOARD (slide 09) — internal workstreams with done/active/next state
+   ========================================================================= */
+.statusboard {
+  position: absolute; inset: 248px 80px 128px 80px;
+  display: grid; grid-template-columns: 1fr 1fr; column-gap: 56px; align-content: start;
+}
+.sb-col__title {
+  font-family: var(--font-body); font-weight: 600; text-transform: uppercase;
+  font-size: var(--overline); letter-spacing: 0.24em; color: var(--fmnts-primary-50);
+  margin-bottom: var(--space-5); padding-bottom: var(--space-3);
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+.sb-col__list { display: flex; flex-direction: column; gap: var(--space-3); list-style: none; margin: 0; padding: 0; }
+.sb-row {
+  display: grid; grid-template-columns: 12px 1fr auto; align-items: center; column-gap: var(--space-4);
+  padding: 10px 14px; border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+}
+.sb-dot { width: 8px; height: 8px; border-radius: 50%; }
+.sb-label { font-size: var(--body-md); line-height: var(--body-md-lh); color: rgba(255,255,255,0.90); }
+.sb-state { font-family: var(--font-body); font-weight: 600; text-transform: uppercase; font-size: var(--overline); letter-spacing: 0.16em; }
+.sb-row--done   .sb-dot { background: var(--success-500); } .sb-row--done   .sb-state { color: var(--success-300); }
+.sb-row--active .sb-dot { background: var(--fmnts-primary); box-shadow: 0 0 0 4px rgba(0,116,200,0.18); } .sb-row--active .sb-state { color: var(--fmnts-primary-50); }
+.sb-row--next   .sb-dot { background: var(--fg-subtle); } .sb-row--next   .sb-state { color: var(--fg-subtle); }
+
+/* =========================================================================
+   §10 Presenter fallback + peek/print guards for the new tool layers
+   ========================================================================= */
+.pv-fallback {
+  position: fixed; left: 50%; bottom: 64px; transform: translateX(-50%); z-index: 50;
+  background: var(--bg-surface); color: var(--fg-default); box-shadow: var(--elevation-3);
+  border-radius: var(--radius-pill); padding: 10px 18px; font: 600 var(--body-sm)/1 var(--font-body);
+}
+.pv-fallback a { color: var(--fmnts-primary); text-decoration: none; margin-left: 6px; }
+.present-btn--console { right: 132px; }
+.reveal.overview .present-btn--console, body.print-pdf .present-btn--console { display: none; }
+
+/* Peek previews (presenter thumbnails): freeze motion, hide all draw/control chrome */
+body.is-peek .orbit.is-drifting { animation: none !important; }
+body.is-peek .marker-overlay, body.is-peek .marker-toolbar, body.is-peek .customcontrols,
+body.is-peek .present-btn, body.is-peek .present-btn--console { display: none !important; }
+/* Print: draw layers + toolbar never in exports */
+body.print-pdf .marker-overlay, body.print-pdf .marker-toolbar { display: none !important; }

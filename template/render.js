@@ -17,9 +17,10 @@ import { projectVisual } from "./archetypes/projectVisual.js";
 import { processDiagram } from "./archetypes/processDiagram.js";
 import { nextSteps } from "./archetypes/nextSteps.js";
 import { closing } from "./archetypes/closing.js";
+import { statusBoard } from "./archetypes/statusBoard.js";
 
 const ARCHETYPE = {
-  cover, overviewBullets, campaignAnalysis, projectVisual, processDiagram, nextSteps, closing,
+  cover, overviewBullets, campaignAnalysis, projectVisual, processDiagram, nextSteps, closing, statusBoard,
 };
 
 /* Default chrome color per archetype (a slide can override via slide.chrome). */
@@ -31,6 +32,7 @@ const DEFAULT_CHROME = {
   processDiagram: "light",
   nextSteps: "light",
   closing: "blue",
+  statusBoard: "dark",
 };
 
 /* Archetypes that own their entire section body (no shared chrome added). */
@@ -102,8 +104,6 @@ function renderSlide(slide, i, total, ctx) {
     ? `<img class="rocket-watermark" src="${esc(ctx.logo("formunauts_visual_blue.svg"))}" alt="" aria-hidden="true">`
     : "";
 
-  const footerLogo = ctx.logo(isDark ? "logo-visual-type-white.png" : "logo-visual-type-blue.png");
-
   return sectionOpen(slide, idx) +
     `<div class="ghost-index" aria-hidden="true">${idx}</div>` +
     watermark +
@@ -111,8 +111,7 @@ function renderSlide(slide, i, total, ctx) {
     headline(slide.headline) +
     lead(slide.lead) +
     body +
-    `<img class="footer-logo" src="${esc(footerLogo)}" alt="FORMUNAUTS" height="20">` +
-    `<div class="page-index">${idx} / ${totalStr}</div>` +
+    `<div class="page-index"><b>${idx}</b> / ${totalStr}</div>` +
     notes +
     `</section>`;
 }

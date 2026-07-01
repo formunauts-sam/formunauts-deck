@@ -13,12 +13,14 @@
   <link rel="stylesheet" href="template/brand.css" />
   <link rel="stylesheet" href="template/deck.css" />
   <link rel="stylesheet" href="plugin/customcontrols/style.css" />
-  <link rel="stylesheet" href="plugin/chalkboard/style.css" />
-  <link rel="stylesheet" href="plugin/pointer/pointer.css" />
+  <link rel="stylesheet" href="plugin/marker/marker.css" />
+  <link rel="stylesheet" href="template/interactive.css" />
 </head>
 <body>
   <div class="reveal"><div class="slides"><!-- render.js injects <section>s here --></div></div>
 
+  <!-- Presenter console (separate window) + fullscreen present, bottom-right -->
+  <button class="present-btn present-btn--console" type="button" id="open-presenter">Presenter ▸</button>
   <button class="present-btn" type="button"
           onclick="document.documentElement.requestFullscreen && document.documentElement.requestFullscreen()">
     Present ▸
@@ -27,19 +29,19 @@
   <!-- Vendored reveal.js core + plugins (CDN-free) -->
   <script src="dist/reveal.js"></script>
   <script src="plugin/notes.js"></script>
-  <script src="plugin/pointer/plugin.js"></script>
-  <script src="plugin/chalkboard/plugin.js"></script>
+  <script src="plugin/marker/plugin.js"></script>
   <script src="plugin/customcontrols/plugin.js"></script>
 
   <script type="module">
     import { renderDeck } from "./template/render.js";
     import { initAnim } from "./template/anim.js";
+    import { initInteractive } from "./template/interactive.js";
+    import { initDeckLink } from "./template/presenter/deck-link.js";
+    import { initCollab } from "./template/collab.js";
 
     /* ---------------------------------------------------------------
-       Deck selection.
-       Default = the active demo below (the ONE per-demo line).
-       Optional: ?deck=YYYY-MM-DD loads decks/YYYY-MM-DD.deck.js with
-       NO html edit — so the next fortnight is just a new data file.
+       Deck selection. Default = the active demo (the ONE per-demo line).
+       ?deck=YYYY-MM-DD loads decks/YYYY-MM-DD.deck.js with no html edit.
     --------------------------------------------------------------- */
     const DEFAULT_DECK = "2026-07-01";
     const wanted = new URLSearchParams(location.search).get("deck") || DEFAULT_DECK;
@@ -60,13 +62,10 @@
       /* Scaling — author at 1280×720; we own margins in deck.css */
       width: 1280, height: 720, margin: 0, minScale: 0.2, maxScale: 2.0, center: false,
 
-      /* PDF export — exactly one page per slide (slides are fixed 720 + overflow:hidden) */
+      /* PDF export — exactly one page per slide */
       pdfMaxPagesPerSlide: 1, pdfSeparateFragments: false,
 
-      /* Motion — brand ease-out-expo. Entrance stagger is auto-playing CSS
-         (see .anim in deck.css), NOT reveal fragments, so slides are always
-         fully composed on the shared screen. Auto-animate still carries the
-         cover→closing ring bookend. */
+      /* Motion — brand ease-out-expo; entrance stagger is auto-playing CSS */
       transition: "fade", transitionSpeed: "default", backgroundTransition: "fade",
       autoAnimateEasing: "cubic-bezier(0.16, 1, 0.3, 1)", autoAnimateDuration: 0.6,
       autoAnimateUnmatched: false,
@@ -76,36 +75,55 @@
       hideInactiveCursor: true, hideCursorTime: 3000,
       controls: false, progress: false,
 
-      /* Routing */
       hash: true,
+      defaultTiming: 45,   /* per-slide override via data-timing (presenter pacing) */
 
-      /* Pacing (green/red in speaker view) — per-slide override via data-timing */
-      defaultTiming: 45,
-
-      /* Plugins — all vendored locally */
-      plugins: [ RevealNotes, RevealChalkboard, RevealCustomControls, RevealPointer ],
-      pointer: { key: "q", color: "red", pointerSize: 16 },
-      chalkboard: { boardmarkerWidth: 3, chalkWidth: 7, theme: "whiteboard" },
+      /* Plugins — all vendored locally. Marker replaces pointer + chalkboard. */
+      plugins: [ RevealNotes, RevealCustomControls, RevealMarker ],
       customcontrols: {
         collapseIcon: "▾", expandIcon: "▸",
         controls: [
-          { icon: "✎", title: "Draw on slide (C)", action: "RevealChalkboard.toggleNotesCanvas();" },
-          { icon: "▤", title: "Chalkboard (B)", action: "RevealChalkboard.toggleChalkboard();" },
+          { icon: "◉", title: "Laser (L)",         action: "RevealMarker.setMode('laser');" },
+          { icon: "✎", title: "Marker (M)",        action: "RevealMarker.toggle('ink');" },
+          { icon: "◍", title: "Spotlight (K)",     action: "RevealMarker.toggle('spotlight');" },
+          { icon: "☰", title: "Speaker notes (S)", action: "RevealNotes.open();" },
         ],
       },
     });
 
-    initAnim(Reveal);  // KPI count-up + reduced-motion gate + ring-drift on slide change
+    initAnim(Reveal);            // KPI count-up + reduced-motion gate + ring-drift
+    initInteractive(Reveal);     // funnel / carousel / slider / reveal-card / count-replay
+    const { peek } = initDeckLink(Reveal);   // presenter sync + owns ?present=peek
+    initCollab(Reveal);          // self-disables unless PARTY_HOST + ?room present
 
-    /* Tag the body when reveal renders in print/PDF mode so the Present
-       button and other on-screen affordances drop out of exports. */
+    /* Peek thumbnails (presenter previews): calm + correct — strip motion, fill count-ups */
+    if (peek) {
+      document.body.classList.add("is-peek");
+      document.querySelectorAll(".count-up[data-count-to]")
+        .forEach((el) => { el.textContent = el.getAttribute("data-count-to"); });
+    }
+
+    /* Presenter open + popup-block fallback (a user-gesture <a> is never blocked) */
+    function showPresenterFallback() {
+      if (document.getElementById("pv-fallback")) return;
+      const bar = document.createElement("div");
+      bar.id = "pv-fallback"; bar.className = "pv-fallback";
+      bar.innerHTML = 'Allow pop-ups, or <a href="presenter.html" target="_blank" rel="noopener">Open presenter ↗</a>';
+      document.body.appendChild(bar);
+    }
+    function openPresenter() {
+      const w = window.open("presenter.html", "fmnts-presenter", "width=1280,height=800,menubar=no,toolbar=no");
+      if (!w || w.closed || typeof w.closed === "undefined") showPresenterFallback();
+    }
+    const openBtn = document.getElementById("open-presenter");
+    if (openBtn) openBtn.addEventListener("click", openPresenter);
+    Reveal.addKeyBinding({ keyCode: 80, key: "P", description: "Open presenter view" }, openPresenter);
+
+    /* Static PDF export: fill count-ups (they only animate on live slide-enter) */
     if (window.location.search.includes("print-pdf")) {
       document.body.classList.add("print-pdf");
-      // Count-up numerals only animate on live slide-enter → in a static PDF
-      // export they'd freeze at "0". Fill their final values for the export.
-      document.querySelectorAll(".count-up[data-count-to]").forEach((el) => {
-        el.textContent = el.getAttribute("data-count-to");
-      });
+      document.querySelectorAll(".count-up[data-count-to]")
+        .forEach((el) => { el.textContent = el.getAttribute("data-count-to"); });
     }
   </script>
 </body>

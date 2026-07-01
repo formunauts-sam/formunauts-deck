@@ -1,0 +1,9 @@
+{
+  "$schema": "https://www.partykit.io/schema.json",
+  "name": "formunauts-deck",
+  "main": "party/deck.ts",
+  "compatibilityDate": "2025-06-01",
+  "vars": {
+    "PRESENTER_TOKEN": ""
+  }
+}

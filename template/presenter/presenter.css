@@ -1,0 +1,792 @@
+/* ============================================================
+   presenter.css — FORMUNAUTS presenter console styling.
+   ------------------------------------------------------------
+   On-brand DARK console (deep cool field, brand-blue accents).
+   Token-driven from brand.css so it reads as FORMUNAUTS, not a
+   dev tool. Purpose-built for a second screen: previews left,
+   big scrollable notes right, controls along the bottom.
+   ============================================================ */
+
+/* ---- Console-local tokens layered on the brand set ---- */
+:root {
+  --pv-field:      #071522;                 /* deepest console field */
+  --pv-panel:      #0E2233;                 /* raised panels */
+  --pv-panel-2:    #12293C;                 /* hover / active panels */
+  --pv-line:       rgba(128, 185, 227, 0.16); /* hairlines (primary-50 @ low a) */
+  --pv-line-soft:  rgba(128, 185, 227, 0.09);
+  --pv-ink:        #EAF2F9;                 /* primary console text */
+  --pv-ink-dim:    rgba(234, 242, 249, 0.62);
+  --pv-ink-faint:  rgba(234, 242, 249, 0.34);
+  --pv-accent:     var(--fmnts-primary);    /* #0074C8 */
+  --pv-accent-lift:#2B93DA;
+  --pv-radius:     var(--radius-lg);
+  --pv-radius-sm:  var(--radius-md);
+  --pv-gap:        18px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 600px at 78% -10%, rgba(0, 116, 200, 0.14), transparent 60%),
+    radial-gradient(900px 500px at 0% 110%, rgba(0, 116, 200, 0.08), transparent 55%),
+    var(--pv-field);
+  color: var(--pv-ink);
+  font-family: var(--font-body);
+  font-size: var(--body-md);
+  line-height: var(--body-md-lh);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+/* Numerals use the display face + tabular figures (no jitter as they tick). */
+.pv-clock__value,
+.pv-index,
+.pv-index-total,
+.pv-pace,
+.pv-jump-num {
+  font-family: var(--font-display);
+  font-feature-settings: "tnum" 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   Grid shell
+   ============================================================ */
+.pv {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh;
+  padding: 16px;
+  gap: 14px;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.pv-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 22px;
+  padding: 12px 20px;
+  background: linear-gradient(180deg, var(--pv-panel), rgba(14, 34, 51, 0.72));
+  border: 1px solid var(--pv-line);
+  border-radius: var(--pv-radius);
+  box-shadow: var(--elevation-3);
+}
+
+.pv-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pv-brand__mark {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--pv-accent);
+  box-shadow: 0 0 0 4px rgba(0, 116, 200, 0.22);
+}
+.pv-brand__label {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--h5);
+  letter-spacing: 0.01em;
+  color: var(--pv-ink);
+}
+
+/* Clocks cluster */
+.pv-clocks {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.pv-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+.pv-clock__value {
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--pv-ink);
+  letter-spacing: 0.01em;
+}
+.pv-clock--wall .pv-clock__value {
+  font-size: 22px;
+  color: var(--pv-ink-dim);
+}
+.pv-clock__label {
+  margin-top: 5px;
+  font-family: var(--font-body);
+  font-size: var(--overline-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  color: var(--pv-ink-faint);
+}
+.pv-reset {
+  appearance: none;
+  border: 1px solid var(--pv-line);
+  background: transparent;
+  color: var(--pv-ink-dim);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: color var(--duration-fast) var(--ease-out-expo),
+    border-color var(--duration-fast) var(--ease-out-expo),
+    background var(--duration-fast) var(--ease-out-expo);
+}
+.pv-reset:hover {
+  color: var(--pv-ink);
+  border-color: var(--pv-accent);
+  background: rgba(0, 116, 200, 0.14);
+}
+
+/* Pace meter */
+.pv-pace-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 190px;
+  justify-self: end;
+}
+.pv-pace {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--pv-ink-dim);
+  text-align: right;
+  transition: color var(--duration-normal) var(--ease-out-expo);
+}
+.pv-pace[data-state="warn"] {
+  color: var(--warning-500);
+}
+.pv-pace[data-state="over"] {
+  color: var(--fmnts-secondary);
+}
+.pv-pace-track {
+  height: 5px;
+  border-radius: var(--radius-pill);
+  background: rgba(128, 185, 227, 0.14);
+  overflow: hidden;
+}
+.pv-pace-fill {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: left center;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--pv-accent), var(--pv-accent-lift));
+  transition: transform 220ms linear, background var(--duration-normal) var(--ease-out-expo);
+}
+.pv-pace-fill[data-state="warn"] {
+  background: linear-gradient(90deg, var(--warning-500), #f2c14e);
+}
+.pv-pace-fill[data-state="over"] {
+  background: linear-gradient(90deg, var(--fmnts-secondary), var(--fmnts-secondary-75));
+}
+
+/* Slide index */
+.pv-index-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding-left: 22px;
+  border-left: 1px solid var(--pv-line);
+}
+.pv-index {
+  font-size: 38px;
+  font-weight: 600;
+  color: var(--pv-accent-lift);
+  line-height: 1;
+}
+.pv-index-sep {
+  font-size: 24px;
+  color: var(--pv-ink-faint);
+}
+.pv-index-total {
+  font-size: 24px;
+  color: var(--pv-ink-dim);
+}
+
+/* ============================================================
+   MAIN — previews (left) + notes (right)
+   ============================================================ */
+.pv-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.32fr) minmax(0, 1fr);
+  gap: var(--pv-gap);
+  min-height: 0;
+}
+
+/* ---- Stage (left column) ---- */
+.pv-stage {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: var(--pv-gap);
+  min-height: 0;
+}
+
+.pv-current,
+.pv-next {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.pv-panel-label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 9px;
+  font-family: var(--font-body);
+  font-size: var(--overline);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--pv-ink-faint);
+}
+.pv-next-name {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  font-size: var(--body-sm);
+  color: var(--pv-ink-dim);
+  margin-left: 2px;
+}
+.pv-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.pv-dot--live {
+  background: var(--success-500);
+  box-shadow: 0 0 0 3px rgba(31, 134, 67, 0.22);
+}
+.pv-dot--next {
+  background: var(--pv-accent);
+  box-shadow: 0 0 0 3px rgba(0, 116, 200, 0.2);
+}
+
+/* Frame shell keeps the 16:9 slide inside a rounded, bordered surface.
+   The iframe renders the 1280×720 deck; reveal scales it to fit. */
+.pv-frame-shell {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  border-radius: var(--pv-radius);
+  overflow: hidden;
+  background: #04101a;
+  border: 1px solid var(--pv-line);
+  box-shadow: var(--elevation-4);
+}
+.pv-frame-shell--next {
+  /* Next preview is a fixed, smaller 16:9 tile. */
+  flex: 0 0 auto;
+  aspect-ratio: 16 / 9;
+  max-height: 30vh;
+  box-shadow: var(--elevation-3);
+  opacity: 0.94;
+}
+.pv-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #04101a;
+  /* Previews are non-interactive; the console drives navigation. */
+  pointer-events: none;
+}
+
+/* Blank veil over the CURRENT preview when the shared screen is blanked. */
+.pv-blank-veil {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  background: rgba(4, 12, 20, 0.9);
+  backdrop-filter: blur(3px);
+  color: var(--pv-ink-dim);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--h4);
+  letter-spacing: 0.04em;
+}
+body.is-blank .pv-blank-veil {
+  display: grid;
+}
+
+/* ---- Notes column (right) ---- */
+.pv-notes-col {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  background: linear-gradient(180deg, var(--pv-panel), rgba(11, 27, 40, 0.7));
+  border: 1px solid var(--pv-line);
+  border-radius: var(--pv-radius);
+  box-shadow: var(--elevation-3);
+  overflow: hidden;
+}
+.pv-notes-head {
+  padding: 18px 24px 14px;
+  border-bottom: 1px solid var(--pv-line-soft);
+  background: rgba(0, 116, 200, 0.06);
+}
+.pv-eyebrow {
+  margin: 0 0 8px;
+  font-family: var(--font-body);
+  font-size: var(--overline);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  color: var(--pv-accent-lift);
+  min-height: 15px;
+}
+.pv-eyebrow:empty {
+  display: none;
+}
+.pv-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 28px;
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+  color: var(--pv-ink);
+}
+
+/* The big scrollable speaker text — the heart of the console. */
+.pv-notes {
+  padding: 20px 24px 28px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+.pv-notes:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: -3px;
+}
+.pv-note-para {
+  margin: 0 0 1.05em;
+  font-size: 22px;
+  line-height: 1.62;
+  color: rgba(234, 242, 249, 0.94);
+  letter-spacing: 0.002em;
+}
+.pv-note-para:last-child {
+  margin-bottom: 0;
+}
+.pv-note-empty {
+  margin: 0;
+  font-size: var(--body-md);
+  font-style: italic;
+  color: var(--pv-ink-faint);
+}
+
+/* Custom scrollbar (brand, subtle) */
+.pv-notes::-webkit-scrollbar {
+  width: 10px;
+}
+.pv-notes::-webkit-scrollbar-track {
+  background: transparent;
+}
+.pv-notes::-webkit-scrollbar-thumb {
+  background: rgba(128, 185, 227, 0.24);
+  border-radius: var(--radius-pill);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.pv-notes::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 185, 227, 0.4);
+  background-clip: padding-box;
+}
+.pv-notes {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(128, 185, 227, 0.28) transparent;
+}
+
+/* ============================================================
+   FOOTER controls
+   ============================================================ */
+.pv-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(0deg, var(--pv-panel), rgba(14, 34, 51, 0.7));
+  border: 1px solid var(--pv-line);
+  border-radius: var(--pv-radius);
+  box-shadow: var(--elevation-3);
+}
+
+.pv-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 52px;
+  padding: 0 22px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--pv-line);
+  background: var(--pv-panel-2);
+  color: var(--pv-ink);
+  font-family: var(--font-body);
+  font-size: var(--h6);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-out-expo),
+    background var(--duration-fast) var(--ease-out-expo),
+    border-color var(--duration-fast) var(--ease-out-expo),
+    box-shadow var(--duration-fast) var(--ease-out-expo),
+    color var(--duration-fast) var(--ease-out-expo);
+}
+.pv-btn__glyph {
+  font-size: 20px;
+  line-height: 1;
+}
+.pv-btn:hover {
+  background: #163650;
+  border-color: rgba(128, 185, 227, 0.3);
+  transform: translateY(-1px);
+}
+.pv-btn:active {
+  transform: translateY(0);
+}
+.pv-btn:focus-visible {
+  outline: none;
+  border-color: var(--pv-accent);
+  box-shadow: 0 0 0 3px rgba(0, 116, 200, 0.4);
+}
+
+/* Nav buttons flank the row; primary "Next" carries the blue. */
+.pv-btn--nav {
+  min-width: 118px;
+  justify-content: center;
+}
+.pv-btn--jump {
+  margin-left: auto;
+}
+.pv-btn--primary {
+  background: linear-gradient(180deg, var(--pv-accent-lift), var(--pv-accent));
+  border-color: transparent;
+  box-shadow: 0 6px 16px -6px rgba(0, 116, 200, 0.7);
+}
+.pv-btn--primary:hover {
+  background: linear-gradient(180deg, #3aa0e4, #0a7fd0);
+}
+
+/* Blank toggle: pressed = active blue ring. */
+.pv-btn--blank[aria-pressed="true"] {
+  background: var(--fmnts-secondary);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 6px 16px -6px rgba(224, 59, 80, 0.7);
+}
+
+/* ============================================================
+   JUMP LIST (slide-out panel)
+   ============================================================ */
+.pv-jump {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: min(420px, 84vw);
+  background: linear-gradient(180deg, #0c2032, #081522);
+  border-left: 1px solid var(--pv-line);
+  box-shadow: -24px 0 60px -20px rgba(0, 0, 0, 0.6);
+  transform: translateX(100%);
+  transition: transform var(--duration-slow) var(--ease-out-expo);
+  z-index: 40;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+.pv-jump.is-open {
+  transform: translateX(0);
+}
+.pv-jump-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--pv-line);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--h5);
+  color: var(--pv-ink);
+}
+.pv-jump-close {
+  appearance: none;
+  border: 1px solid var(--pv-line);
+  background: transparent;
+  color: var(--pv-ink-dim);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 15px;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out-expo),
+    border-color var(--duration-fast) var(--ease-out-expo);
+}
+.pv-jump-close:hover {
+  color: var(--pv-ink);
+  border-color: var(--fmnts-secondary);
+}
+
+.pv-jump-list {
+  list-style: none;
+  margin: 0;
+  padding: 10px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(128, 185, 227, 0.28) transparent;
+}
+.pv-jump-list::-webkit-scrollbar {
+  width: 10px;
+}
+.pv-jump-list::-webkit-scrollbar-thumb {
+  background: rgba(128, 185, 227, 0.24);
+  border-radius: var(--radius-pill);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.pv-jump-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  margin: 2px 0;
+  border-radius: var(--pv-radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--pv-ink);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out-expo),
+    border-color var(--duration-fast) var(--ease-out-expo);
+}
+.pv-jump-item:hover {
+  background: rgba(0, 116, 200, 0.12);
+}
+.pv-jump-item:focus-visible {
+  outline: none;
+  border-color: var(--pv-accent);
+  box-shadow: 0 0 0 2px rgba(0, 116, 200, 0.4) inset;
+}
+.pv-jump-item.is-current {
+  background: rgba(0, 116, 200, 0.18);
+  border-color: rgba(43, 147, 218, 0.5);
+}
+.pv-jump-num {
+  flex: 0 0 auto;
+  width: 34px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--pv-ink-faint);
+}
+.pv-jump-item.is-current .pv-jump-num {
+  color: var(--pv-accent-lift);
+}
+.pv-jump-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.pv-jump-eyebrow {
+  font-size: var(--overline-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--pv-ink-faint);
+}
+.pv-jump-title {
+  font-size: var(--body-md);
+  line-height: 1.3;
+  color: var(--pv-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pv-jump-empty,
+.pv-jump-list .pv-jump-empty {
+  padding: 16px;
+  color: var(--pv-ink-faint);
+  font-style: italic;
+  list-style: none;
+}
+
+/* ============================================================
+   CONNECTION BANNER
+   ============================================================ */
+.pv-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 96px;
+  transform: translateX(-50%) translateY(14px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px 11px 18px;
+  border-radius: var(--radius-pill);
+  background: var(--pv-panel-2);
+  border: 1px solid var(--fmnts-secondary-50);
+  box-shadow: var(--elevation-4);
+  color: var(--pv-ink);
+  font-size: var(--body-sm);
+  z-index: 60;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-normal) var(--ease-out-expo),
+    transform var(--duration-normal) var(--ease-out-expo);
+}
+/* Only visible while disconnected. */
+body.is-disconnected .pv-banner {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+.pv-banner__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--fmnts-secondary);
+  box-shadow: 0 0 0 3px rgba(224, 59, 80, 0.24);
+  animation: pv-pulse 1.8s ease-in-out infinite;
+}
+.pv-banner__text {
+  color: var(--pv-ink-dim);
+}
+.pv-banner__btn {
+  appearance: none;
+  border: 1px solid var(--pv-line);
+  background: transparent;
+  color: var(--pv-ink);
+  font: 600 var(--body-sm) / 1 var(--font-body);
+  padding: 7px 13px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out-expo),
+    border-color var(--duration-fast) var(--ease-out-expo);
+}
+.pv-banner__btn:hover {
+  background: rgba(0, 116, 200, 0.16);
+  border-color: var(--pv-accent);
+}
+.pv-banner__link {
+  color: var(--pv-accent-lift);
+  text-decoration: none;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pv-banner__link:hover {
+  text-decoration: underline;
+}
+
+@keyframes pv-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgba(224, 59, 80, 0.24);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(224, 59, 80, 0.06);
+  }
+}
+
+/* Green header mark when connected (quiet confirmation). */
+body.is-connected .pv-brand__mark {
+  background: var(--success-500);
+  box-shadow: 0 0 0 4px rgba(31, 134, 67, 0.22);
+}
+
+/* ============================================================
+   Responsive — narrow / short second screens
+   ============================================================ */
+@media (max-width: 1080px) {
+  .pv-main {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1.1fr) minmax(0, 1fr);
+  }
+  .pv-stage {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .pv-next {
+    min-width: 0;
+  }
+  .pv-frame-shell--next {
+    max-height: none;
+    height: 100%;
+    aspect-ratio: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .pv-header {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 12px 18px;
+  }
+  .pv-pace-wrap {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    min-width: 0;
+  }
+  .pv-pace {
+    text-align: left;
+  }
+  .pv-index-wrap {
+    border-left: 0;
+    padding-left: 0;
+  }
+  .pv-stage {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1.3fr) minmax(0, 0.7fr);
+  }
+  .pv-btn__text {
+    display: none;
+  }
+  .pv-btn--nav {
+    min-width: 56px;
+  }
+}
+
+/* ============================================================
+   Reduced motion — kill non-essential transitions/animations
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .pv-pace-fill {
+    transition: none;
+  }
+}
