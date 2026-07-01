@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Internal deck on a public host: link-shareable, but keep it out of search results -->
+  <meta name="robots" content="noindex, nofollow" />
+  <title>FORMUNAUTS — Marketing Update</title>
+
+  <!-- CHROME. Never edited per-demo. -->
+  <link rel="stylesheet" href="dist/reset.css" />
+  <link rel="stylesheet" href="dist/reveal.css" />
+  <link rel="stylesheet" href="template/brand.css" />
+  <link rel="stylesheet" href="template/deck.css" />
+  <link rel="stylesheet" href="plugin/customcontrols/style.css" />
+  <link rel="stylesheet" href="plugin/chalkboard/style.css" />
+  <link rel="stylesheet" href="plugin/pointer/pointer.css" />
+</head>
+<body>
+  <div class="reveal"><div class="slides"><!-- render.js injects <section>s here --></div></div>
+
+  <button class="present-btn" type="button"
+          onclick="document.documentElement.requestFullscreen && document.documentElement.requestFullscreen()">
+    Present ▸
+  </button>
+
+  <!-- Vendored reveal.js core + plugins (CDN-free) -->
+  <script src="dist/reveal.js"></script>
+  <script src="plugin/notes.js"></script>
+  <script src="plugin/pointer/plugin.js"></script>
+  <script src="plugin/chalkboard/plugin.js"></script>
+  <script src="plugin/customcontrols/plugin.js"></script>
+
+  <script type="module">
+    import { renderDeck } from "./template/render.js";
+    import { initAnim } from "./template/anim.js";
+
+    /* ---------------------------------------------------------------
+       Deck selection.
+       Default = the active demo below (the ONE per-demo line).
+       Optional: ?deck=YYYY-MM-DD loads decks/YYYY-MM-DD.deck.js with
+       NO html edit — so the next fortnight is just a new data file.
+    --------------------------------------------------------------- */
+    const DEFAULT_DECK = "2026-07-01";
+    const wanted = new URLSearchParams(location.search).get("deck") || DEFAULT_DECK;
+    const safe = /^[0-9A-Za-z._-]+$/.test(wanted) ? wanted : DEFAULT_DECK;
+
+    let deck;
+    try {
+      ({ deck } = await import(`./decks/${safe}.deck.js`));
+    } catch (err) {
+      console.error(`[deck] could not load "${safe}", falling back to ${DEFAULT_DECK}`, err);
+      ({ deck } = await import(`./decks/${DEFAULT_DECK}.deck.js`));
+    }
+    if (deck?.meta?.title) document.title = `FORMUNAUTS — ${deck.meta.title}`;
+
+    renderDeck(deck, document.querySelector(".slides"));  // build DOM from data
+
+    Reveal.initialize({
+      /* Scaling — author at 1280×720; we own margins in deck.css */
+      width: 1280, height: 720, margin: 0, minScale: 0.2, maxScale: 2.0, center: false,
+
+      /* PDF export — exactly one page per slide (slides are fixed 720 + overflow:hidden) */
+      pdfMaxPagesPerSlide: 1, pdfSeparateFragments: false,
+
+      /* Motion — brand ease-out-expo. Entrance stagger is auto-playing CSS
+         (see .anim in deck.css), NOT reveal fragments, so slides are always
+         fully composed on the shared screen. Auto-animate still carries the
+         cover→closing ring bookend. */
+      transition: "fade", transitionSpeed: "default", backgroundTransition: "fade",
+      autoAnimateEasing: "cubic-bezier(0.16, 1, 0.3, 1)", autoAnimateDuration: 0.6,
+      autoAnimateUnmatched: false,
+      fragments: false,
+
+      /* Clean share — hide idle cursor, no nav chrome on the shared window */
+      hideInactiveCursor: true, hideCursorTime: 3000,
+      controls: false, progress: false,
+
+      /* Routing */
+      hash: true,
+
+      /* Pacing (green/red in speaker view) — per-slide override via data-timing */
+      defaultTiming: 45,
+
+      /* Plugins — all vendored locally */
+      plugins: [ RevealNotes, RevealChalkboard, RevealCustomControls, RevealPointer ],
+      pointer: { key: "q", color: "red", pointerSize: 16 },
+      chalkboard: { boardmarkerWidth: 3, chalkWidth: 7, theme: "whiteboard" },
+      customcontrols: {
+        collapseIcon: "▾", expandIcon: "▸",
+        controls: [
+          { icon: "✎", title: "Draw on slide (C)", action: "RevealChalkboard.toggleNotesCanvas();" },
+          { icon: "▤", title: "Chalkboard (B)", action: "RevealChalkboard.toggleChalkboard();" },
+        ],
+      },
+    });
+
+    initAnim(Reveal);  // KPI count-up + reduced-motion gate + ring-drift on slide change
+
+    /* Tag the body when reveal renders in print/PDF mode so the Present
+       button and other on-screen affordances drop out of exports. */
+    if (window.location.search.includes("print-pdf")) {
+      document.body.classList.add("print-pdf");
+      // Count-up numerals only animate on live slide-enter → in a static PDF
+      // export they'd freeze at "0". Fill their final values for the export.
+      document.querySelectorAll(".count-up[data-count-to]").forEach((el) => {
+        el.textContent = el.getAttribute("data-count-to");
+      });
+    }
+  </script>
+</body>
+</html>

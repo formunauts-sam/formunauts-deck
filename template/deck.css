@@ -1,0 +1,556 @@
+/* ============================================================
+   FORMUNAUTS Demo-Deck — deck.css
+   ------------------------------------------------------------
+   CHROME. Never edited per-demo.
+   §4 archetype layouts · persistent chrome · §5 framed-image
+   system · §6 motion classes. References ONLY var(--token).
+   Canvas: 1280 × 720. Authored in fixed px; reveal transform-
+   scales it crisp to any display. Safe margin 80 L/R, 64 T/B.
+   Anchor y-stack (holds on all content slides):
+     kicker y=64 · headline ~140–210 · content y=248→592 ·
+     footer y=636.
+   ============================================================ */
+
+/* -----------------------------------------------------------
+   0. Reveal shell reset — we own the canvas and margins
+----------------------------------------------------------- */
+.reveal { font-family: var(--font-body); color: var(--fg-default); }
+.reveal .slides { text-align: left; }               /* Swiss left edge, never centered */
+.reveal .slides section { padding: 0; height: 720px; width: 1280px; box-sizing: border-box; }
+.reveal .slides section > * { box-sizing: border-box; }
+.reveal .backgrounds { background: var(--bg-base); } /* neutral base behind everything */
+.reveal, .reveal .slides { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+/* Kill reveal default heading transforms/margins — brand type owns it */
+.reveal h1,.reveal h2,.reveal h3,.reveal h4,.reveal h5,.reveal h6 {
+  text-transform: none; letter-spacing: -0.01em; margin: 0; font-family: var(--font-body); font-weight: 600;
+  color: inherit; text-shadow: none; word-wrap: normal;
+}
+.reveal p { margin: 0; }
+.reveal ul, .reveal ol { list-style: none; margin: 0; padding: 0; }
+.reveal a { color: var(--fg-link); }
+.reveal strong, .reveal b { font-weight: 700; }
+
+/* Chrome-color surface fills (set by render.js as a class on <section>) */
+.slide { position: relative; width: 1280px; height: 720px; overflow: hidden; }
+.slide--light   { background: var(--bg-base);    color: var(--fg-default); }
+.slide--muted   { background: var(--bg-muted);   color: var(--fg-default); }
+.slide--dark    { background: var(--bg-inverse); color: var(--fg-inverse); }
+.slide--blue    { color: var(--fg-inverse);
+  background: linear-gradient(135deg, var(--fmnts-primary-dark) 0%, var(--fmnts-primary) 100%); }
+
+/* -----------------------------------------------------------
+   1. Persistent chrome — kicker rail, headline block, footer
+      Absolutely positioned to the 1280×720 canvas so "the line"
+      (x=80) and the y-stack hold identically on every slide.
+----------------------------------------------------------- */
+.kicker {
+  position: absolute; left: 80px; top: 56px;
+  font-family: var(--font-body); font-weight: 600; text-transform: uppercase;
+  font-size: var(--overline); line-height: var(--overline-lh); letter-spacing: 0.30em;
+  color: var(--fg-muted);
+}
+.slide--dark .kicker, .slide--blue .kicker { color: rgba(255,255,255,0.70); }
+
+/* 1px hairline under the kicker anchors the top baseline (content slides) */
+.kicker-rule {
+  position: absolute; left: 80px; right: 80px; top: 92px; height: 1px;
+  background: var(--border-subtle); border: 0;
+}
+.slide--dark .kicker-rule, .slide--blue .kicker-rule { background: rgba(255,255,255,0.14); }
+
+/* Headline block — sits in the ~140–210 band */
+.headline {
+  position: absolute; left: 80px; top: 128px; right: 80px;
+  font-family: var(--font-body); font-weight: 700;
+  font-size: var(--h1); line-height: var(--h1-lh); letter-spacing: -0.01em;
+  color: var(--fg-default); max-width: 1000px;
+}
+.slide--dark .headline, .slide--blue .headline { color: var(--fg-inverse); }
+
+/* Lead / one-line takeaway just under the headline */
+.lead {
+  position: absolute; left: 80px; top: 188px; right: 80px;
+  font-size: var(--body-lg); line-height: var(--body-lg-lh); color: var(--fg-muted);
+  max-width: 760px;
+}
+.slide--dark .lead, .slide--blue .lead { color: rgba(255,255,255,0.80); }
+
+/* Content region — the canonical focal band (y 248 → 592) */
+.content {
+  position: absolute; left: 80px; right: 80px; top: 248px; bottom: 128px;
+}
+
+/* Footer chrome */
+.footer-logo { position: absolute; left: 80px; bottom: 64px; height: 20px; width: auto; }
+.page-index {
+  position: absolute; right: 80px; bottom: 64px;
+  font-family: var(--font-display); font-feature-settings: "tnum" 1;
+  font-size: var(--body-sm); color: var(--fg-subtle); text-align: right;
+}
+.slide--dark .page-index, .slide--blue .page-index { color: rgba(255,255,255,0.55); }
+
+/* -----------------------------------------------------------
+   2. §5 Framed-image system — no image can EVER be squished.
+      Every <img> lives in an aspect-correct .asset-frame with
+      object-fit:contain. The frame adapts to the asset ratio.
+      NOTE: scope the max-width guard to CONTENT images only.
+      A blanket `.reveal img { height:auto }` would out-specify
+      the single-class logo/rocket rules and blow them up to
+      full-canvas width — so we constrain the reset to media
+      inside .asset-frame + the deck's img tag baseline.
+----------------------------------------------------------- */
+.reveal .asset-frame svg { max-width: 100%; height: auto; display: block; }
+.reveal img { display: block; }   /* baseline only — sizing owned by each element's class */
+
+.asset-frame {
+  position: relative; width: 100%; overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--neutral-100);        /* any pad reads as an intentional mat */
+  box-shadow: var(--elevation-2);        /* frame shadow — no border on the same box */
+}
+.asset-frame--floating { box-shadow: var(--elevation-3); } /* floating on blue/dark */
+/* higher specificity than the .reveal .asset-frame reset above → object-fit truly governs (no accidental crop/gap) */
+.reveal .asset-frame > img {
+  width: 100%; height: 100%;
+  object-fit: contain; object-position: center;
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+}
+/* Crop variant — ONLY for the sanctioned circular photo / a hero band */
+.asset-frame--cover > img { object-fit: cover; border: 0; border-radius: var(--radius-md); }
+
+/* Per-ratio frames (aspect-ratio = intrinsic W/H of the asset). render.js picks the class. */
+.ratio-post-portrait { aspect-ratio: 914 / 1184; }  /* Formunauts #1/#3/#4 ≈ 0.77 */
+.ratio-post-square   { aspect-ratio: 914 / 890;  }  /* Formunauts #2 ≈ 1.03 */
+.ratio-post-near     { aspect-ratio: 914 / 976;  }  /* Formunauts #5 ≈ 0.94 */
+.ratio-amb-portrait  { aspect-ratio: 890 / 1112; }  /* Reinhard #2/#3/#4 = 0.80 */
+.ratio-amb-intro     { aspect-ratio: 914 / 1658; }  /* Reinhard intro, tall 0.55 */
+.ratio-li-banner     { aspect-ratio: 4 / 1;      }  /* LinkedIn banner 3168×792 */
+.ratio-card-proof    { aspect-ratio: 2198 / 745; }  /* business-card proof front+back 2.95 */
+.ratio-keyvisual     { aspect-ratio: 4000 / 1415;}  /* key-visual / wide claim (if ever used) */
+.ratio-marketing     { aspect-ratio: 660 / 1173; }  /* marketing-photo.jpg (circular/cover only) */
+
+/* Corner badge on a frame (LIVE / PLANNED) */
+.asset-badge {
+  position: absolute; top: 12px; left: 12px; z-index: 2;
+  font-family: var(--font-body); font-weight: 700;
+  font-size: var(--overline); line-height: 1; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 6px 10px; border-radius: var(--radius-pill);
+}
+.asset-badge--success { background: var(--success-100); color: var(--success-500); }
+.asset-badge--planned { background: var(--warning-300); color: var(--warning-700); }
+
+/* Optional caption under a frame */
+.caption { margin-top: var(--space-2); font-size: var(--body-sm); line-height: var(--body-sm-lh); color: var(--fg-muted); }
+
+/* -----------------------------------------------------------
+   3. §5 Logos — lock HEIGHT, width auto. Never width+height both.
+----------------------------------------------------------- */
+.logo           { height: 32px; width: auto; }   /* square mark / SVG (1:1) */
+.logo--wordmark { height: 24px; width: auto; }   /* logo-type-* */
+.logo--lockup   { height: 40px; width: auto; }   /* logo-visual-type-* (2.73:1) */
+.logo--claim    { height: 44px; width: auto; }   /* logo-claim-wide-* (2.83:1) — cover */
+.logo--product  { height: 40px; width: auto; }   /* ONE/APP, dark bg only */
+
+/* -----------------------------------------------------------
+   4. Decorative rocket + CSS orbital rings (cover / closing).
+      Rings are DRAWN — never key-visual-space.png.
+----------------------------------------------------------- */
+.rocket-mark {
+  position: absolute; pointer-events: none; user-select: none;
+  opacity: 0.10; height: 560px; width: auto;
+}
+.rocket-mark--tr { top: -120px; right: -110px; }   /* cover: bleed off top-right */
+.rocket-mark--tl { top: -120px; left: -110px; transform: scaleX(-1); } /* closing: mirror to top-left */
+.rocket-watermark {
+  position: absolute; right: 40px; bottom: 40px; height: 240px; width: auto;
+  opacity: 0.06; pointer-events: none; user-select: none;
+}
+
+/* Orbital rings — thin SVG arcs sweeping a corner */
+.orbit { position: absolute; pointer-events: none; overflow: visible; }
+.orbit--br { right: -220px; bottom: -260px; width: 760px; height: 760px; }
+.orbit--tl { left: -220px;  top: -260px;    width: 760px; height: 760px; transform: rotate(180deg); }
+.orbit circle { fill: none; }
+.orbit .ring-1 { stroke: rgba(255,255,255,0.28); stroke-width: 1.5; }
+.orbit .ring-2 { stroke: var(--fmnts-primary-25); stroke-width: 1.25; opacity: 0.55; }
+.orbit .ring-dot { fill: rgba(255,255,255,0.85); stroke: none; }
+
+/* Ring drift: very slow, ≤2°, transform only (gated off in reduced-motion via anim.js) */
+@keyframes ring-drift { from { transform: rotate(0deg); } to { transform: rotate(2deg); } }
+.orbit--br.is-drifting { animation: ring-drift 20s linear infinite alternate; }
+.orbit--tl.is-drifting { animation: ring-drift 20s linear infinite alternate; transform-origin: center; }
+
+/* =========================================================================
+   ARCHETYPE LAYOUTS
+   ========================================================================= */
+
+/* -----------------------------------------------------------
+   COVER (slide 01)
+----------------------------------------------------------- */
+.cover__claim { position: absolute; left: 80px; top: 64px; height: 44px; width: auto; }
+.cover__eyebrow {
+  position: absolute; left: 80px; top: 300px;
+  font-family: var(--font-body); font-weight: 600; text-transform: uppercase;
+  font-size: var(--overline); line-height: var(--overline-lh); letter-spacing: 0.30em;
+  color: rgba(255,255,255,0.70);
+}
+.cover__headline {
+  position: absolute; left: 80px; top: 336px; right: 200px;
+  font-family: var(--font-body); font-weight: 800;
+  font-size: var(--display-xl); line-height: var(--display-xl-lh); letter-spacing: -0.02em;
+  color: var(--fg-inverse); max-width: 940px;
+}
+.cover__rule {
+  position: absolute; left: 82px; top: 552px; width: 132px; height: 2px;
+  background: rgba(255,255,255,0.32); border: 0; transform-origin: left center;
+}
+.cover__sub {
+  position: absolute; left: 80px; top: 580px;
+  font-family: var(--font-display); font-feature-settings: "tnum" 1;
+  font-size: var(--body-lg); line-height: var(--body-lg-lh); color: rgba(255,255,255,0.80);
+}
+.cover__wordmark { position: absolute; left: 80px; bottom: 56px; height: 28px; width: auto; opacity: 0.9; }
+
+/* -----------------------------------------------------------
+   OVERVIEW BULLETS (slides 02 · 09 quiet)
+   Editorial split: index-numeral bullets left, muted aside right
+----------------------------------------------------------- */
+.overview { position: absolute; inset: 248px 80px 128px 80px; display: grid;
+  grid-template-columns: minmax(0, 6.4fr) minmax(0, 3.6fr); column-gap: 56px; align-content: start; }
+
+.bullet-list { display: flex; flex-direction: column; gap: var(--space-5); }
+.bullet {
+  display: grid; grid-template-columns: 44px 1fr; align-items: baseline; column-gap: var(--space-4);
+}
+.bullet__idx {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1;
+  font-size: var(--h3); line-height: 1; color: var(--fmnts-primary); font-weight: 600;
+}
+.bullet__text { font-size: var(--body-lg); line-height: var(--body-lg-lh); color: var(--fg-default); }
+.slide--dark .bullet__text { color: rgba(255,255,255,0.92); }
+
+/* muted "also shipped" aside */
+.aside-panel {
+  border-left: 1px solid var(--border-subtle); padding-left: var(--space-6);
+}
+.aside-panel__title {
+  font-family: var(--font-body); font-weight: 600; text-transform: uppercase;
+  font-size: var(--overline); letter-spacing: 0.22em; color: var(--fg-subtle);
+  margin-bottom: var(--space-4);
+}
+.aside-panel__list { display: flex; flex-direction: column; gap: var(--space-3); }
+.aside-panel__list li {
+  font-size: var(--body-sm); line-height: var(--body-sm-lh); color: var(--fg-muted);
+  padding-left: var(--space-4); position: relative;
+}
+.aside-panel__list li::before {
+  content: ""; position: absolute; left: 0; top: 9px; width: 5px; height: 5px;
+  border-radius: 50%; background: var(--fmnts-primary-50);
+}
+
+/* --- quiet variant: two muted columns on dark (slide 09) --- */
+.overview--quiet { grid-template-columns: 1fr 1fr; column-gap: 64px; }
+.quiet-col__title {
+  font-family: var(--font-body); font-weight: 600; text-transform: uppercase;
+  font-size: var(--overline); letter-spacing: 0.24em; color: var(--fmnts-primary-50);
+  margin-bottom: var(--space-5); padding-bottom: var(--space-3);
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+.quiet-col__list { display: flex; flex-direction: column; gap: var(--space-4); }
+.quiet-col__list li {
+  font-size: var(--body-md); line-height: var(--body-md-lh); color: rgba(255,255,255,0.72);
+  padding-left: var(--space-5); position: relative;
+}
+.quiet-col__list li::before {
+  content: ""; position: absolute; left: 0; top: 10px; width: 6px; height: 6px;
+  border-radius: 50%; background: var(--fmnts-primary);
+}
+
+/* -----------------------------------------------------------
+   CAMPAIGN ANALYSIS — the drawn funnel (slide 03)
+----------------------------------------------------------- */
+.analysis { position: absolute; inset: 260px 80px 116px 80px; display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 6fr); column-gap: 56px; align-items: start; }
+
+.analysis__side { padding-top: var(--space-2); }
+.analysis__caption { font-size: var(--body-md); line-height: var(--body-md-lh); color: var(--fg-muted); max-width: 360px; }
+
+/* Funnel: descending stages down the blue ramp, right-aligned Chillax numerals */
+.funnel { display: flex; flex-direction: column; gap: 10px; }
+.funnel__stage {
+  position: relative; display: grid; grid-template-columns: 1fr auto; align-items: center;
+  column-gap: var(--space-6); padding: 16px 24px; border-radius: var(--radius-md);
+  color: var(--fg-inverse); box-shadow: var(--elevation-1);
+  /* width steps down via inline margin from render.js */
+}
+.funnel__stage[data-step="0"] { background: var(--fmnts-primary); }
+.funnel__stage[data-step="1"] { background: var(--fmnts-primary-75); }
+.funnel__stage[data-step="2"] { background: var(--fmnts-primary-50); color: var(--neutral-900); }
+.funnel__stage[data-step="3"] { background: var(--fmnts-primary-25); color: var(--neutral-900); }
+.funnel__label { font-size: var(--body-md); font-weight: 600; }
+.funnel__note {
+  display: inline-block; margin-left: var(--space-3); font-size: var(--body-sm); font-weight: 600;
+  opacity: 0.85;
+}
+.funnel__value {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1; font-weight: 600;
+  font-size: var(--display-sm); line-height: 1; text-align: right; min-width: 120px;
+}
+
+/* stat pills under the funnel */
+.pills { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-6); }
+.pill {
+  display: inline-flex; align-items: baseline; gap: var(--space-2);
+  padding: 8px 16px; border-radius: var(--radius-pill);
+  background: var(--bg-surface); border: 1px solid var(--border-subtle);
+  box-shadow: var(--elevation-1);
+}
+.pill__value {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1; font-weight: 600;
+  font-size: var(--h4); color: var(--fmnts-primary);
+}
+.pill__label { font-size: var(--body-sm); color: var(--fg-muted); }
+/* the SINGLE red stopper */
+.pill--accent { border-color: var(--fmnts-secondary-50); background: var(--bg-surface); }
+.pill--accent .pill__value { color: var(--fmnts-secondary); }
+.pill--accent .pill__label { color: var(--fmnts-secondary-75); }
+
+/* -----------------------------------------------------------
+   PROJECT VISUAL — hero | masonry | single (slides 04 05 06 08)
+----------------------------------------------------------- */
+.project { position: absolute; inset: 240px 80px 112px 80px; }
+
+/* --- layout: hero (slide 04) ---
+   Fill the content region and split it into a tall media row + a thin
+   banner strip. The hero frame is capped by max-height (NOT height:100%)
+   so aspect-ratio wins and the tall portrait never clips; the banner is
+   capped so its 4:1 stays a slim strip. Everything contains, never crops. */
+.project--hero {
+  /* hero spans BOTH rows on the left → the LIVE post is the tallest, dominant object.
+     Planned thumbs + banner stack in a shorter right column, clearly smaller. */
+  display: grid;
+  grid-template-columns: minmax(0, 3.4fr) minmax(0, 6.6fr);
+  grid-template-rows: 1fr auto;
+  grid-template-areas: "hero thumbs" "hero band";
+  column-gap: 44px; row-gap: 20px; align-items: start; min-height: 0;
+}
+.project__hero  { grid-area: hero; min-height: 0; height: 100%; display: flex; align-items: flex-start; justify-content: flex-start; }
+/* height drives the frame; aspect-ratio computes width → the tall portrait fills full height, no clip */
+.reveal .project--hero .project__hero .asset-frame { height: 100%; width: auto; max-width: 100%; }
+/* planned thumbs — deliberately smaller: a short capped row so they never rival the hero */
+.project__thumbs {
+  grid-area: thumbs; min-height: 0; height: 150px;
+  display: flex; gap: 16px; align-items: flex-start; justify-content: flex-start;
+}
+.project__thumb { min-height: 0; height: 100%; display: flex; }
+.reveal .project--hero .project__thumb .asset-frame { height: 100%; width: auto; max-width: 100%; }
+.project__thumb .caption { text-align: center; }
+/* banner — slim strip, flush-left under the thumbs (right column, not floating centre) */
+.project__band { grid-area: band; align-self: end; display: flex; justify-content: flex-start; min-width: 0; }
+.reveal .project--hero .project__band .asset-frame { height: 70px; width: auto; max-width: 100%; }
+
+/* --- layout: single (slides 05 06) --- */
+.project--single { display: grid; grid-template-columns: 1fr; column-gap: 56px; align-items: center; }
+.project--single.has-teaser { grid-template-columns: minmax(0, 5.4fr) minmax(0, 4.6fr); }
+.project--single.project--showcase { grid-template-columns: 1fr; place-items: center; }
+.project--single .pivot-list { max-width: 860px; }
+.project__single-media { width: 100%; }
+
+/* pivot / learning list (slide 05) */
+.pivot-list { display: flex; flex-direction: column; gap: var(--space-4); }
+.pivot {
+  display: grid; grid-template-columns: 28px 1fr; align-items: baseline; column-gap: var(--space-3);
+  font-size: var(--body-lg); line-height: var(--body-lg-lh); color: var(--fg-default);
+}
+.pivot__mark { font-weight: 700; color: var(--fmnts-primary); }
+.pivot--lead .pivot__text { font-weight: 600; }
+.pivot--accent .pivot__text {
+  color: var(--fmnts-secondary); font-weight: 600;
+  border-left: 3px solid var(--fmnts-secondary); padding-left: var(--space-3); margin-left: -3px;
+}
+.pivot--accent { grid-template-columns: 1fr; }
+
+/* business-card showcase (slide 06) — laid on a surface, generous mat */
+.showcase-wrap { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+.showcase-wrap .asset-frame {
+  width: min(880px, 100%); background: var(--bg-surface); box-shadow: var(--elevation-3);
+  transform: rotate(-1.2deg);
+}
+.showcase-wrap .asset-frame > img { border: 0; }
+
+/* --- layout: masonry (slide 08) — contained editorial bento ---
+   A height-capped flex row: every tile fits the content region by height,
+   its width computed from its OWN aspect-ratio (contain, never squished).
+   Alternating vertical offsets give the staggered, non-flush editorial feel
+   the spec asks for — not a uniform grid (which is what squished them before). */
+.project--masonry { display: block; }
+.masonry {
+  height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  gap: 22px;
+}
+.masonry__tile { min-width: 0; height: 84%; display: flex; }
+.masonry__tile:nth-child(odd)  { align-self: flex-start; }   /* stagger up */
+.masonry__tile:nth-child(even) { align-self: flex-end; }     /* stagger down */
+.masonry__tile:nth-child(2) { height: 92%; }                 /* the wider ~square reads larger */
+.masonry__tile .asset-frame { height: 100%; width: auto; max-width: 100%; box-shadow: var(--elevation-2); }
+.masonry__tile .asset-frame > img { transition: transform var(--duration-normal) var(--ease-out-expo); }
+.masonry__tile .asset-frame:hover > img { transform: scale(1.02); }
+
+/* -----------------------------------------------------------
+   PROCESS DIAGRAM — 3 connected step cards (slide 07)
+----------------------------------------------------------- */
+.process { position: absolute; inset: 284px 80px 150px 80px;
+  display: flex; align-items: center; justify-content: space-between; gap: 0; }
+.proc-card {
+  flex: 1 1 0; align-self: center; background: var(--bg-surface); border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-2); padding: var(--space-8) var(--space-6);
+  display: flex; flex-direction: column; gap: var(--space-3); max-width: 340px;
+}
+.proc-card__sub { font-size: var(--body-sm); line-height: var(--body-sm-lh); color: var(--fg-muted); }
+.proc-card__n {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1; font-weight: 600;
+  font-size: var(--h3); color: var(--fmnts-primary-50); line-height: 1;
+}
+.proc-card__icon {
+  width: 52px; height: 52px; border-radius: var(--radius-md);
+  background: var(--blue-100); color: var(--fmnts-primary);
+  display: grid; place-items: center;
+}
+.proc-card__icon svg { width: 26px; height: 26px; stroke: currentColor; fill: none;
+  stroke-width: 2.25; stroke-linecap: round; stroke-linejoin: round; }
+.proc-card__label { font-size: var(--h5); font-weight: 600; color: var(--fg-default); line-height: var(--h5-lh); }
+
+.proc-arrow { flex: 0 0 56px; display: grid; place-items: center; color: var(--fmnts-primary); }
+.proc-arrow svg { width: 40px; height: 20px; stroke: currentColor; fill: none;
+  stroke-width: 2.25; stroke-linecap: round; stroke-linejoin: round; }
+
+.process__footnote {
+  position: absolute; left: 80px; bottom: 96px;
+  font-size: var(--body-sm); line-height: var(--body-sm-lh); color: var(--fg-muted);
+}
+
+/* -----------------------------------------------------------
+   NEXT STEPS — 2 columns, active vs ongoing (slide 10)
+----------------------------------------------------------- */
+.nextsteps { position: absolute; inset: 248px 80px 128px 80px;
+  display: grid; grid-template-columns: 1fr 1fr; column-gap: 56px; align-content: start; }
+.ns-col__head { display: flex; align-items: center; gap: var(--space-3);
+  margin-bottom: var(--space-5); padding-bottom: var(--space-3); border-bottom: 1px solid var(--border-subtle); }
+.ns-col__dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+.ns-col--active .ns-col__dot { background: var(--fmnts-primary); }
+.ns-col--muted  .ns-col__dot { background: var(--fg-subtle); }
+.ns-col__title {
+  font-family: var(--font-body); font-weight: 600; text-transform: uppercase;
+  font-size: var(--overline); letter-spacing: 0.22em; color: var(--fg-muted);
+}
+.ns-col__list { display: flex; flex-direction: column; gap: var(--space-4); }
+.ns-col__list li { display: grid; grid-template-columns: 20px 1fr; align-items: baseline;
+  column-gap: var(--space-2); font-size: var(--body-md); line-height: var(--body-md-lh); }
+.ns-col--active .ns-col__list li { color: var(--fg-default); }
+.ns-col--muted  .ns-col__list li { color: var(--fg-muted); }
+.ns-col__list li::before {
+  content: "→"; color: var(--fmnts-primary); font-weight: 700;
+}
+.ns-col--muted .ns-col__list li::before { content: "·"; color: var(--fg-subtle); font-size: 1.4em; line-height: 0; }
+
+/* -----------------------------------------------------------
+   CLOSING (slide 11)
+----------------------------------------------------------- */
+.closing__statement {
+  position: absolute; left: 80px; top: 300px; right: 200px;
+  font-family: var(--font-display); font-weight: 600;
+  font-size: var(--display-md); line-height: var(--display-md-lh); letter-spacing: -0.01em;
+  color: var(--fg-inverse); max-width: 900px;
+}
+.closing__sub {
+  position: absolute; left: 80px; top: 468px;
+  font-size: var(--body-lg); line-height: var(--body-lg-lh); color: rgba(255,255,255,0.80);
+}
+.closing__site {
+  position: absolute; right: 80px; bottom: 64px;
+  font-family: var(--font-display); font-feature-settings: "tnum" 1;
+  font-size: var(--body-sm); color: rgba(255,255,255,0.70);
+}
+.closing__wordmark { position: absolute; left: 80px; bottom: 56px; height: 28px; width: auto; opacity: 0.9; }
+
+/* =========================================================================
+   §6 MOTION — auto-playing anchor-stack stagger (NO clicks) + reduced-motion.
+   Every .anim element is fully composed on entry; only the TIMING of the
+   fade-up staggers, driven by --anim-step. The animation plays when its
+   parent <section> gains reveal's .present class (i.e. on slide entry),
+   so a screen-shared window never shows an empty slide waiting for arrows.
+   Ring drift + KPI count-up handled in anim.js.
+   ========================================================================= */
+@keyframes anim-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+/* default hidden state so nothing flashes before its section is present */
+.reveal .slides section .anim { opacity: 0; }
+/* play, staggered, only on the present slide */
+.reveal .slides section.present .anim {
+  animation: anim-rise var(--duration-slow) var(--ease-out-expo) both;
+  animation-delay: calc(var(--anim-step, 0) * 90ms);
+}
+/* keep past/future slides' content settled (no residual hidden state on peek) */
+.reveal .slides section.past .anim,
+.reveal .slides section.future .anim { opacity: 1; animation: none; }
+
+.count-up { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit.is-drifting { animation: none !important; }
+  .masonry__tile .asset-frame > img { transition: none !important; }
+  /* instant, no stagger — everything visible immediately */
+  .reveal .slides section .anim,
+  .reveal .slides section.present .anim { opacity: 1 !important; animation: none !important; transform: none !important; }
+}
+
+/* =========================================================================
+   PRESENT AFFORDANCE — a small, unobtrusive "Present" button (fullscreen)
+   Hidden in speaker view + print/pdf.
+   ========================================================================= */
+.present-btn {
+  position: fixed; right: 16px; bottom: 14px; z-index: 40;
+  font-family: var(--font-body); font-weight: 600; font-size: var(--body-sm);
+  color: var(--fg-inverse); background: var(--fmnts-primary);
+  border: 0; border-radius: var(--radius-pill); padding: 8px 16px; cursor: pointer;
+  box-shadow: var(--elevation-2); opacity: 0.72; transition: opacity var(--duration-fast) var(--ease-out-expo);
+}
+.present-btn:hover { opacity: 1; }
+.reveal.overview .present-btn, body.print-pdf .present-btn { display: none; }
+
+/* =========================================================================
+   §7 SIGNATURE — giant ghost index numeral, bleeding off bottom-left.
+   Fills the lower third of every content slide (editorial depth) and makes
+   a FORMUNAUTS deck recognisable at a glance. Pure texture — behind content.
+   ========================================================================= */
+.ghost-index {
+  position: absolute; left: 4px; bottom: 0; z-index: 0;
+  /* bleed downward with transform (compositor-only) so it never extends the
+     720px layout box — otherwise reveal's print mode paginates each slide in two */
+  transform: translateY(36%);
+  font-family: var(--font-display); font-feature-settings: "tnum" 1; font-weight: 700;
+  font-size: 440px; line-height: 1; letter-spacing: -0.04em;
+  color: var(--fmnts-primary); opacity: 0.05; pointer-events: none; user-select: none;
+}
+.slide--muted .ghost-index { opacity: 0.06; }
+.slide--dark .ghost-index, .slide--blue .ghost-index { color: var(--neutral-0); opacity: 0.06; }
+/* chrome + content ride ABOVE the ghost */
+.slide > .kicker, .slide > .kicker-rule, .slide > .headline, .slide > .lead,
+.slide > .content, .slide .analysis, .slide .project, .slide .process,
+.slide .overview, .slide .nextsteps, .slide > .footer-logo, .slide > .page-index { position: absolute; z-index: 1; }
+.slide .analysis, .slide .project, .slide .process, .slide .overview, .slide .nextsteps { z-index: 1; }
+
+/* Annotation / draw controls: clear of the bottom-left logo — tuck bottom-right */
+.reveal .customcontrols { left: auto !important; right: 12px !important; bottom: 50px !important; top: auto !important; }
+
+/* =========================================================================
+   §8 STATIC / PDF EXPORT — content must be visible without reveal's .present
+   class (print-pdf only marks one slide present, which would blank the rest).
+   The live deck is unaffected; this only lifts the entrance gate for export.
+   ========================================================================= */
+body.print-pdf .reveal .slides section .anim { opacity: 1 !important; animation: none !important; transform: none !important; }
+body.print-pdf .orbit.is-drifting { animation: none !important; }

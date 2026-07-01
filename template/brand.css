@@ -1,0 +1,181 @@
+/* ============================================================
+   FORMUNAUTS Demo-Deck — brand.css
+   ------------------------------------------------------------
+   CHROME. Never edited per-demo.
+   §2 design tokens (:root) + §3 @font-face.
+   Source of truth: formunauts-design/assets/colors_and_type.css
+   Difference from source: font-display:block (screenshot-safe,
+   no fallback flash) + print-color-adjust:exact.
+   Author CSS references ONLY var(--token) — never a raw hex.
+   ============================================================ */
+
+/* ---------------------------------------------------------------
+   §3  @font-face — fonts are SIBLINGS of this file under ./fonts/
+   (URLs resolve relative to the CSS file, not the HTML)
+   Figtree = .ttf (truetype) · Chillax = .otf (opentype)
+   font-display:block → the glyphs wait, so no FOUT on export
+--------------------------------------------------------------- */
+@font-face { font-family:"Figtree"; font-style:normal; font-weight:400; font-display:block;
+  src:url("../fonts/Figtree-Regular.ttf") format("truetype"); }
+@font-face { font-family:"Figtree"; font-style:italic; font-weight:400; font-display:block;
+  src:url("../fonts/Figtree-Italic.ttf") format("truetype"); }
+@font-face { font-family:"Figtree"; font-style:normal; font-weight:500; font-display:block;
+  src:url("../fonts/Figtree-Medium.ttf") format("truetype"); }
+@font-face { font-family:"Figtree"; font-style:normal; font-weight:600; font-display:block;
+  src:url("../fonts/Figtree-SemiBold.ttf") format("truetype"); }
+@font-face { font-family:"Figtree"; font-style:normal; font-weight:700; font-display:block;
+  src:url("../fonts/Figtree-Bold.ttf") format("truetype"); }
+@font-face { font-family:"Figtree"; font-style:normal; font-weight:800; font-display:block;
+  src:url("../fonts/Figtree-ExtraBold.ttf") format("truetype"); }
+
+@font-face { font-family:"Chillax"; font-style:normal; font-weight:400; font-display:block;
+  src:url("../fonts/Chillax-Regular.otf") format("opentype"); }
+@font-face { font-family:"Chillax"; font-style:normal; font-weight:500; font-display:block;
+  src:url("../fonts/Chillax-Medium.otf") format("opentype"); }
+@font-face { font-family:"Chillax"; font-style:normal; font-weight:600; font-display:block;
+  src:url("../fonts/Chillax-Semibold.otf") format("opentype"); }
+@font-face { font-family:"Chillax"; font-style:normal; font-weight:700; font-display:block;
+  src:url("../fonts/Chillax-Bold.otf") format("opentype"); }
+
+/* ---------------------------------------------------------------
+   §2  Token set (:root)
+--------------------------------------------------------------- */
+:root {
+  /* ---- Brand blue (the hero) ---- */
+  --fmnts-primary:       #0074C8;
+  --fmnts-primary-dark:  #054D85;
+  --fmnts-primary-mid:   #0074BE;
+  --fmnts-primary-75:    #4096D6;
+  --fmnts-primary-50:    #80B9E3;
+  --fmnts-primary-25:    #BFDCF1;
+  --blue-50:  #F3F8FD;
+  --blue-100: #E3F0FF;
+  --blue-200: #DDEEFB;
+  --blue-300: #AFD2F8;
+  --blue-500: #0074C8;
+  --blue-600: #0074BE;
+  --blue-700: #054D85;
+
+  /* ---- Secondary red (STOPPER ONLY, max ~1/surface, never a fill/CTA) ---- */
+  --fmnts-secondary:     #E03B50;
+  --fmnts-secondary-75:  #E76475;
+  --fmnts-secondary-50:  #EF8C97;
+  --fmnts-secondary-25:  #F7C5CB;
+
+  /* ---- Neutrals (cool, deep — not pure grey) ---- */
+  --neutral-0:    #FFFFFF;
+  --neutral-50:   #F8F9FA;
+  --neutral-100:  #F2F4F5;
+  --neutral-150:  #EDF0F3;
+  --neutral-200:  #ECF0F3;
+  --neutral-300:  #D5DDE5;
+  --neutral-400:  #AFBECD;
+  --neutral-500:  #99A9B3;
+  --neutral-600:  #6D7B8A;
+  --neutral-700:  #3E4C5A;
+  --neutral-800:  #212934;
+  --neutral-900:  #1E2A33;   /* APP dark-chrome shell */
+  --neutral-1000: #000F1A;
+  --black-06: rgba(0,15,26,.06);
+  --black-10: rgba(0,15,26,.10);
+
+  /* ---- Semantic (status — use the role, never decoratively) ---- */
+  --success-100: #EAF3EB;  --success-300: #B7DDC2;  --success-500: #1F8643;  --success-700: #0F5527;
+  --warning-100: #FEF9E6;  --warning-300: #FEEAB4;  --warning-500: #E0A82E;  --warning-700: #8A5A00;
+  --danger-100:  #FBE8E5;  --danger-300:  #F3B8B8;  --danger-500:  #D41303;  --danger-600:  #E03B50;  --danger-700: #8A0E00;
+
+  /* ---- Accents (gamification only, sparingly) ---- */
+  --purple-100: #F1EEF8;  --purple-500: #9747FF;  --purple-600: #765EB7;
+  --pink-500:   #DF5DB1;
+  --yellow-amber: #FEEAB4;
+
+  /* ---- Semantic role tokens (reach for these FIRST) ---- */
+  --bg-base:      var(--neutral-50);   /* #F8F9FA page background behind white cards */
+  --bg-surface:   var(--neutral-0);    /* #FFFFFF card/panel */
+  --bg-muted:     var(--neutral-100);  /* #F2F4F5 muted surface */
+  --bg-inverse:   var(--neutral-900);  /* #1E2A33 dark field */
+  --fg-default:   var(--neutral-900);  /* #1E2A33 body on light */
+  --fg-muted:     var(--neutral-600);  /* #6D7B8A */
+  --fg-subtle:    var(--neutral-400);  /* #AFBECD */
+  --fg-inverse:   var(--neutral-0);    /* #FFFFFF text on dark/blue */
+  --fg-link:      var(--fmnts-primary);
+  --fg-on-primary:var(--neutral-0);
+  --border-default: var(--neutral-300);/* #D5DDE5 */
+  --border-subtle:  var(--neutral-150);/* #EDF0F3 */
+  --border-strong:  var(--neutral-400);/* #AFBECD */
+  --border-focus:   var(--fmnts-primary);
+
+  /* ---- Type families (selected by token, never literal font-family) ---- */
+  --font-body:    "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Chillax", "Figtree", sans-serif;  /* logo, ONE/APP, display accents, NUMERALS only */
+  --font-mono:    ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* ---- Type scale — Display (Chillax-eligible) ---- */
+  --display-2xl: 96px;  --display-2xl-lh: 96px;
+  --display-xl:  80px;  --display-xl-lh:  96px;
+  --display-lg:  64px;  --display-lg-lh:  78px;
+  --display-md:  48px;  --display-md-lh:  56px;
+  --display-sm:  36px;  --display-sm-lh:  48px;
+
+  /* ---- Type scale — Headings (Figtree 600) ---- */
+  --h1: 40px; --h1-lh: 48px;   /* letter-spacing -0.01em */
+  --h2: 32px; --h2-lh: 44px;   /* letter-spacing -0.01em */
+  --h3: 24px; --h3-lh: 32px;
+  --h4: 20px; --h4-lh: 28px;
+  --h5: 18px; --h5-lh: 26px;
+  --h6: 16px; --h6-lh: 24px;
+
+  /* ---- Type scale — Body (Figtree 400) ---- */
+  --body-lg: 18px; --body-lg-lh: 28px;
+  --body-md: 16px; --body-md-lh: 26px;
+  --body-sm: 14px; --body-sm-lh: 22px;
+  --body-xs: 12px; --body-xs-lh: 18px;
+
+  /* ---- Overline (uppercase, wide-tracked) ---- */
+  --overline:    11px; --overline-lh: 15px;   /* letter-spacing 0.30em */
+  --overline-sm:  8px; --overline-sm-lh: 10px; /* letter-spacing 0.30em */
+
+  /* ---- Spacing (4-pt grid) ---- */
+  --space-1: 4px;   --space-2: 8px;   --space-3: 12px;  --space-4: 16px;
+  --space-5: 20px;  --space-6: 24px;  --space-8: 32px;  --space-10: 40px;
+  --space-12: 48px; --space-16: 64px; --space-20: 80px; --space-24: 96px;
+
+  /* ---- Radii ---- */
+  --radius-xs: 4px;  --radius-sm: 8px;  --radius-md: 12px;
+  --radius-lg: 16px; /* DEFAULT card/panel */
+  --radius-xl: 20px; --radius-2xl: 24px; --radius-pill: 9999px;
+
+  /* ---- Elevation (soft cool-blue shadows — never pure black; card = border OR shadow, rarely both) ---- */
+  --elevation-1: 0 2.33px 5px -1px rgba(213,221,229,1);
+  --elevation-2: 0 4px 6px -1px rgba(48,48,48,.10), 0 2px 4px -2px rgba(48,48,48,.10);
+  --elevation-3: 0 10px 15px -3px rgba(0,0,0,.10), 0 4px 6px -4px rgba(0,0,0,.10);
+  --elevation-4: 0 20px 25px -5px rgba(0,0,0,.10), 0 8px 10px -6px rgba(0,0,0,.10);
+  --elevation-5: 0 25px 50px -12px rgba(0,0,0,.25);
+
+  /* ---- Motion ---- */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 150ms; --duration-normal: 300ms; --duration-slow: 400ms;
+}
+
+/* ---------------------------------------------------------------
+   Helper presets (§2)
+--------------------------------------------------------------- */
+.font-display { font-family: var(--font-display); }
+.font-num { font-family: var(--font-display); font-feature-settings: "tnum" 1; } /* Chillax tabular numerals */
+
+.overline {
+  font-family: var(--font-body); font-weight: 600; text-transform: uppercase;
+  font-size: var(--overline); line-height: var(--overline-lh); letter-spacing: 0.30em;
+}
+
+/* Type baseline — deck.css scopes real usage inside .reveal */
+h1,h2,h3,h4,h5,h6 { font-family: var(--font-body); font-weight: 600; margin: 0; }
+h1 { font-size: var(--h1); line-height: var(--h1-lh); letter-spacing: -0.01em; }
+h2 { font-size: var(--h2); line-height: var(--h2-lh); letter-spacing: -0.01em; }
+h3 { font-size: var(--h3); line-height: var(--h3-lh); }
+h4 { font-size: var(--h4); line-height: var(--h4-lh); }
+h5 { font-size: var(--h5); line-height: var(--h5-lh); }
+h6 { font-size: var(--h6); line-height: var(--h6-lh); }
+
+/* Screenshot / export fidelity — force backgrounds + colors to print/render exactly */
+* { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
