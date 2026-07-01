@@ -59,10 +59,15 @@ export const deck = {
       ],
       pills: [
         { label: "real conversations", value: "~25" },
-        { label: "hot", value: 7, tone: "accent" },
+        { label: "hot leads", value: 7, tone: "accent" },
         { label: "warm", value: 8 },
         { label: "referrals", value: 10 },
       ],
+      nextStep: {
+        label: "Next step",
+        detail: "Reviewing follow-up strategy with Max",
+        when: "today · 14:00",
+      },
       notes: "Ok so the Switzerland charity outreach — the full funnel. We targeted 428 charities, invited 365, 98 accepted — about 27 percent — and 53 replied. Out of that around 25 real conversations, 7 of them properly hot, plus some warm ones and referrals. Sitting down with Max this afternoon for next steps. imho a really solid base to build the follow-up on. Any questions on this?",
     },
 
@@ -77,8 +82,13 @@ export const deck = {
         { src: "reinhard-planned-3.png", tag: "PLANNED" },
         { src: "reinhard-planned-4.png", tag: "PLANNED" },
       ],
-      band: { src: "reinhard-linkedin-banner.png" },
-      cadence: "new post every week",
+      metrics: [
+        { value: "4.2", unit: "k", label: "impressions" },
+        { value: 186, label: "reactions", tone: "accent" },
+        { value: 92, label: "profile views" },
+      ],
+      band: { src: "reinhard-linkedin-banner.png", url: "linkedin.com/in/reinhard" },
+      cadence: "new post every Tue 09:30",
       notes: "Ok nice — the ambassador postings are live. Reinhard's intro post is out, that's the big one on the left, and the engagement is really good so far. We optimised his whole LinkedIn profile for the ambassador content — you can see the banner along the bottom. And from now there's a new post every Tuesday at half nine; on the right are the next ones already prepared. Any questions on this?",
     },
 
@@ -125,9 +135,12 @@ export const deck = {
       eyebrow: "CONTENT · SOCIAL", headline: "Keeping the channel alive",
       lead: "Company posts, the donor-feedback series, the congress tour.",
       gallery: [
-        "formunauts-post-1.png", "formunauts-post-2.png", "formunauts-post-3.png",
-        "formunauts-post-4.png", "formunauts-post-5.png",
+        { src: "formunauts-post-1.png", feature: true, channel: "instagram", url: "instagram.com/formunauts", alt: "Featured Formunauts company post" },
+        { src: "formunauts-post-2.png", channel: "linkedin" },
+        { src: "formunauts-post-4.png", channel: "instagram" },
+        { src: "formunauts-post-5.png", channel: "linkedin" },
       ],
+      more: { value: "40+", label: "more this quarter" },
       notes: "Here are some more of our postings — company content, the donor-feedback series continuing, the congress tour, and a few more initiatives. Nothing revolutionary on its own, but this is the consistent drumbeat that keeps the channel alive and the brand present. And much more where that came from.",
     },
 
@@ -161,17 +174,22 @@ export const deck = {
         {
           title: "Web · campaigns · content", tone: "active",
           items: [
-            "UK webpage live", "Key Value page online", "adapt CH + Italy learnings",
-            "ambassador content + boost postings",
-            "CH email campaign (non-LinkedIn leads) + final outreach strategy",
+            { t: "UK webpage live", icon: "globe", when: "~1 wk" },
+            { t: "Key Value page online", icon: "globe" },
+            { t: "adapt CH + Italy learnings" },
+            { t: "ambassador content + boost postings" },
+            { t: "CH email campaign + final outreach strategy" },
           ],
         },
         {
           title: "Data · ops (ongoing, Q3)", tone: "muted",
           items: [
-            "SSOT concept — map where data lives (whole Q3)", "asset cleanup",
-            "new camera in WEBB (~2 wks)", "ONE NPS newsletter",
-            "pitchdeck knowledge transfer with CC", "more automation — ad reviews & A/B tests",
+            { t: "SSOT concept — map where data lives", icon: "database", when: "whole Q3" },
+            { t: "asset cleanup" },
+            { t: "new camera in WEBB", icon: "camera", when: "~2 wks" },
+            { t: "ONE NPS newsletter" },
+            { t: "pitchdeck transfer with CC" },
+            { t: "more automation — ad reviews & A/B", icon: "git-branch" },
           ],
         },
       ],

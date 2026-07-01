@@ -18,9 +18,10 @@ import { processDiagram } from "./archetypes/processDiagram.js";
 import { nextSteps } from "./archetypes/nextSteps.js";
 import { closing } from "./archetypes/closing.js";
 import { statusBoard } from "./archetypes/statusBoard.js";
+import { bentoBoard } from "./archetypes/bentoBoard.js";
 
 const ARCHETYPE = {
-  cover, overviewBullets, campaignAnalysis, projectVisual, processDiagram, nextSteps, closing, statusBoard,
+  cover, overviewBullets, campaignAnalysis, projectVisual, processDiagram, nextSteps, closing, statusBoard, bentoBoard,
 };
 
 /* Default chrome color per archetype (a slide can override via slide.chrome). */
@@ -32,7 +33,8 @@ const DEFAULT_CHROME = {
   processDiagram: "light",
   nextSteps: "light",
   closing: "blue",
-  statusBoard: "dark",
+  statusBoard: "muted",
+  bentoBoard: "muted",
 };
 
 /* Archetypes that own their entire section body (no shared chrome added). */

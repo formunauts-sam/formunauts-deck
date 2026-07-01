@@ -152,9 +152,47 @@
   --elevation-4: 0 20px 25px -5px rgba(0,0,0,.10), 0 8px 10px -6px rgba(0,0,0,.10);
   --elevation-5: 0 25px 50px -12px rgba(0,0,0,.25);
 
-  /* ---- Motion ---- */
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  /* ---- Motion (legacy seeds — kept; the "Orbital Motion" system below extends them) ---- */
   --duration-fast: 150ms; --duration-normal: 300ms; --duration-slow: 400ms;
+
+  /* ============================================================
+     ORBITAL MOTION SYSTEM (masterplan §2). Additive — extends the
+     three legacy seeds above. Everything decelerates (ease-out
+     family); nothing bounces. Compositor-only (transform/opacity/
+     clip-path). Read-facing motion ≤600ms; decorative ≥900ms.
+     ============================================================ */
+
+  /* §2.1 · durations — names encode the rule (readable ≤600ms, ambient ≥900ms) */
+  --dur-instant: 80ms;    /* micro state: chip toggle, focus ring        */
+  --dur-fast:    150ms;   /* hover, small fades (alias of legacy fast)   */
+  --dur-normal:  300ms;   /* default UI transition (alias of normal)     */
+  --dur-slow:    400ms;   /* entrance fade-up per element (alias of slow)*/
+  --dur-slower:  600ms;   /* slide morph / auto-animate (matches config) */
+  --dur-count:   900ms;   /* KPI count-up (matches anim.js COUNT_MS)     */
+  --dur-draw:    1400ms;  /* SVG line-draw (rocket trail, rings)         */
+
+  /* §2.2 · easings — the Orbital family; ALL decelerate. ~95% use --ease-orbit. */
+  --ease-orbit:    cubic-bezier(0.16, 1, 0.3, 1);  /* the signature curve                 */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);   /* symmetric, for moves that also exit */
+  --ease-exit:     cubic-bezier(0.4, 0, 1, 1);     /* accelerate-in, for departures       */
+  /* alias so every existing `var(--ease-out-expo)` reference keeps working unchanged */
+  --ease-out-expo: var(--ease-orbit);
+
+  /* §2.3 · choreography constants (legacy 90ms step + 8px rise are preserved) */
+  --stagger-step:  90ms;  /* delay between sibling reveals (= legacy --anim-step cadence) */
+  --stagger-tight: 45ms;  /* dense collections (masonry tiles, jump lists)               */
+  --rise-distance: 8px;   /* fade-up travel — never more                                 */
+  --lift-hover:    4px;   /* card hover lift                                             */
+
+  /* ============================================================
+     LAYOUT TOKENS (masterplan §1.5) — named grid templates so new
+     archetypes compose without drift. The canvas is 1280×720;
+     these describe COLUMN tracks (rows are set per archetype).
+     ============================================================ */
+  --grid-bento:     repeat(12, 1fr);                       /* 12-col responsive bento    */
+  --grid-split:     minmax(0, 5fr) minmax(0, 5fr);         /* balanced two-column board  */
+  --grid-editorial: minmax(0, 6.4fr) minmax(0, 3.6fr);     /* content-left, aside-right  */
+  --gap-bento:      var(--space-5);                        /* default tile gutter (20px) */
 }
 
 /* ---------------------------------------------------------------

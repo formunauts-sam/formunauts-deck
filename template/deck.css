@@ -287,6 +287,7 @@
 /* Funnel: descending stages down the blue ramp, right-aligned Chillax numerals */
 .funnel { display: flex; flex-direction: column; gap: 10px; }
 .funnel__stage {
+  appearance: none; -webkit-appearance: none; border: 0; font: inherit; text-align: left; cursor: pointer;
   position: relative; display: grid; grid-template-columns: 1fr auto; align-items: center;
   column-gap: var(--space-6); padding: 16px 24px; border-radius: var(--radius-md);
   color: var(--fg-inverse); box-shadow: var(--elevation-1);
@@ -574,27 +575,37 @@ body.print-pdf .orbit.is-drifting { animation: none !important; }
 /* =========================================================================
    §9 STATUS BOARD (slide 09) — internal workstreams with done/active/next state
    ========================================================================= */
+/* Light "engine room" board — fills top→bottom, on-brand (no dark). */
 .statusboard {
-  position: absolute; inset: 248px 80px 128px 80px;
-  display: grid; grid-template-columns: 1fr 1fr; column-gap: 56px; align-content: start;
+  position: absolute; inset: 228px 80px 104px 80px;
+  display: flex; flex-direction: column; gap: var(--space-6);
 }
+/* completion meter across the top */
+.sb-meter { display: flex; flex-direction: column; gap: var(--space-3); }
+.sb-meter__track { height: 8px; border-radius: var(--radius-pill); background: var(--blue-100); overflow: hidden; }
+.sb-meter__fill { height: 100%; border-radius: var(--radius-pill); background: var(--fmnts-primary); }
+.sb-meter__label { font-size: var(--body-sm); color: var(--fg-muted); margin: 0; }
+.sb-meter__label b { font-family: var(--font-display); font-feature-settings: "tnum" 1; color: var(--fmnts-primary); font-weight: 600; }
+/* two columns of state cards; rows spread to fill the height */
+.sb-cols { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 56px; }
+.sb-col { display: flex; flex-direction: column; min-height: 0; }
 .sb-col__title {
   font-family: var(--font-body); font-weight: 600; text-transform: uppercase;
-  font-size: var(--overline); letter-spacing: 0.24em; color: var(--fmnts-primary-50);
-  margin-bottom: var(--space-5); padding-bottom: var(--space-3);
-  border-bottom: 1px solid rgba(255,255,255,0.12);
+  font-size: var(--overline); letter-spacing: 0.24em; color: var(--fmnts-primary);
+  margin-bottom: var(--space-4); padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
 }
-.sb-col__list { display: flex; flex-direction: column; gap: var(--space-3); list-style: none; margin: 0; padding: 0; }
+.sb-col__list { flex: 1 1 auto; display: flex; flex-direction: column; gap: var(--space-3); justify-content: space-between; list-style: none; margin: 0; padding: 0; }
 .sb-row {
   display: grid; grid-template-columns: 12px 1fr auto; align-items: center; column-gap: var(--space-4);
-  padding: 10px 14px; border-radius: var(--radius-md);
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+  padding: 16px 18px; border-radius: var(--radius-md);
+  background: var(--bg-surface); border: 1px solid var(--border-subtle); box-shadow: var(--elevation-1);
 }
-.sb-dot { width: 8px; height: 8px; border-radius: 50%; }
-.sb-label { font-size: var(--body-md); line-height: var(--body-md-lh); color: rgba(255,255,255,0.90); }
+.sb-dot { width: 9px; height: 9px; border-radius: 50%; }
+.sb-label { font-size: var(--body-md); line-height: var(--body-md-lh); color: var(--fg-default); }
 .sb-state { font-family: var(--font-body); font-weight: 600; text-transform: uppercase; font-size: var(--overline); letter-spacing: 0.16em; }
-.sb-row--done   .sb-dot { background: var(--success-500); } .sb-row--done   .sb-state { color: var(--success-300); }
-.sb-row--active .sb-dot { background: var(--fmnts-primary); box-shadow: 0 0 0 4px rgba(0,116,200,0.18); } .sb-row--active .sb-state { color: var(--fmnts-primary-50); }
+.sb-row--done   .sb-dot { background: var(--success-500); } .sb-row--done   .sb-state { color: var(--success-500); }
+.sb-row--active .sb-dot { background: var(--fmnts-primary); box-shadow: 0 0 0 4px rgba(0,116,200,0.18); } .sb-row--active .sb-state { color: var(--fmnts-primary); }
 .sb-row--next   .sb-dot { background: var(--fg-subtle); } .sb-row--next   .sb-state { color: var(--fg-subtle); }
 
 /* =========================================================================
@@ -615,3 +626,527 @@ body.is-peek .marker-overlay, body.is-peek .marker-toolbar, body.is-peek .custom
 body.is-peek .present-btn, body.is-peek .present-btn--console { display: none !important; }
 /* Print: draw layers + toolbar never in exports */
 body.print-pdf .marker-overlay, body.print-pdf .marker-toolbar { display: none !important; }
+
+/* =========================================================================
+   §11 REDESIGN FOUNDATION — bento board · device frames · duotone.
+   (masterplan §1.5 layout tokens · §2 motion · §3.1 archetypes/utilities)
+   Brand tokens ONLY. Every visual degrades to a fully-visible static state
+   under body.print-pdf, body.is-peek, and prefers-reduced-motion (guards at
+   the end of this section mirror the existing §6/§8/§10 gates).
+   ========================================================================= */
+
+/* -----------------------------------------------------------
+   11.1 BENTO BOARD (archetype: bentoBoard) — 12-col, fills .content
+   edge-to-edge. Tiles are white cards on --blue-50 that place themselves
+   via --tile-span (columns) / --tile-rowspan (rows). Fills by definition.
+----------------------------------------------------------- */
+.bento-wrap {
+  position: absolute; inset: 228px 80px 104px 80px;
+  display: flex; flex-direction: column; gap: var(--space-6); min-height: 0;
+}
+.bento {
+  flex: 1 1 auto; min-height: 0;
+  display: grid;
+  grid-template-columns: var(--grid-bento);           /* repeat(12,1fr) */
+  grid-auto-rows: 1fr;                                 /* equal row bands → tiles fill height */
+  grid-auto-flow: dense;                               /* pack around wide/tall tiles, no holes */
+  gap: var(--gap-bento);
+}
+
+/* A tile places itself; span/rowspan come from the data (clamped in JS). */
+.bento-tile {
+  grid-column: span var(--tile-span, 4);
+  grid-row: span var(--tile-rowspan, 1);
+  position: relative; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-5) var(--space-6);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-2);
+  overflow: hidden;
+}
+
+/* tone variants ------------------------------------------------ */
+.bento-tile--hero {                                    /* the ONE dominant tile (§1.3) */
+  gap: var(--space-4); padding: var(--space-6) var(--space-8);
+}
+.bento-tile--accent {                                  /* blue-tinted emphasis card */
+  background: var(--blue-100); border-color: var(--fmnts-primary-25);
+}
+.bento-tile--ghost {                                   /* the "+40 more" drumbeat cell */
+  background: transparent; border: 1px dashed var(--border-default); box-shadow: none;
+  align-items: flex-start; justify-content: center;
+}
+
+/* tile internals ---------------------------------------------- */
+.bento-tile__eyebrow {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-family: var(--font-body); font-weight: 600; text-transform: uppercase;
+  font-size: var(--overline); letter-spacing: 0.22em; color: var(--fg-muted);
+}
+.bento-tile__title {
+  font-family: var(--font-display); font-weight: 600;
+  font-size: var(--h4); line-height: var(--h4-lh); color: var(--fg-default);
+}
+.bento-tile--hero .bento-tile__title { font-size: var(--h3); line-height: var(--h3-lh); }
+.bento-tile__text {
+  font-size: var(--body-sm); line-height: var(--body-sm-lh); color: var(--fg-muted);
+}
+
+/* giant numeral (Chillax tabular; counts up with zero layout shift) */
+.bento-tile__stat {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-2);
+  margin-top: auto;                                    /* stats sit low → hierarchy */
+}
+.bento-tile__stat > b {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1; font-weight: 600;
+  font-size: var(--display-sm); line-height: 1; color: var(--fmnts-primary);
+}
+.bento-tile--hero .bento-tile__stat > b { font-size: var(--display-md); }
+.bento-tile__unit {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1; font-weight: 600;
+  font-size: var(--h3); color: var(--fmnts-primary);
+}
+.bento-tile__stat-label {
+  flex: 1 0 100%; font-size: var(--body-sm); color: var(--fg-muted);
+}
+
+/* media inside a tile — fills the remaining height, never squished
+   (assetFrame contains; deviceFrame covers). */
+.bento-tile__media { flex: 1 1 auto; min-height: 0; display: flex; align-items: stretch; }
+.bento-tile__media > .asset-frame,
+.bento-tile__media > .device-frame { width: 100%; height: 100%; min-height: 0; }
+.bento-tile__media > .asset-frame { align-self: center; }
+
+/* status system (engine-room re-skin, light) — dot + pill, reuse §9 semantics */
+.bento-tile__dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; background: var(--fg-subtle); }
+.bento-tile__state {
+  align-self: flex-start; margin-top: auto;
+  font-family: var(--font-body); font-weight: 600; text-transform: uppercase;
+  font-size: var(--overline); letter-spacing: 0.16em; color: var(--fg-subtle);
+  padding: 3px 10px; border-radius: var(--radius-pill); background: var(--neutral-100);
+}
+.bento-tile--done   .bento-tile__dot   { background: var(--success-500); }
+.bento-tile--done   .bento-tile__state { color: var(--success-700); background: var(--success-100); }
+.bento-tile--active .bento-tile__dot   { background: var(--fmnts-primary); box-shadow: 0 0 0 4px rgba(0,116,200,0.18); }
+.bento-tile--active .bento-tile__state { color: var(--fmnts-primary); background: var(--blue-100); }
+.bento-tile--next   .bento-tile__dot   { background: var(--fg-subtle); }
+.bento-tile--next   .bento-tile__state { color: var(--fg-muted); }
+
+/* completion meter across the top of the bento (count-up fill) */
+.bento-meter { display: flex; flex-direction: column; gap: var(--space-3); flex: 0 0 auto; }
+.bento-meter__track { height: 8px; border-radius: var(--radius-pill); background: var(--blue-100); overflow: hidden; }
+.bento-meter__fill {
+  height: 100%; border-radius: var(--radius-pill); background: var(--fmnts-primary);
+  transform-origin: left center;
+}
+.bento-meter__label { font-size: var(--body-sm); color: var(--fg-muted); margin: 0; }
+.bento-meter__label b {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1;
+  color: var(--fmnts-primary); font-weight: 600;
+}
+
+/* the bento rides above the ghost numeral like the other content regions */
+.slide .bento-wrap { position: absolute; z-index: 1; }
+
+/* -----------------------------------------------------------
+   11.2 DEVICE FRAMES — shared screen (fixed aspect + cover-crop).
+   The image FILLS the frame; distortion is impossible because
+   .device-screen owns the ratio and object-fit:cover governs.
+----------------------------------------------------------- */
+.device-frame { position: relative; display: flex; flex-direction: column; min-width: 0; }
+.device-frame .caption { margin-top: var(--space-2); }
+.device-frame .asset-badge { z-index: 3; }             /* keep the badge above chrome */
+
+/* the cropped screen surface shared by phone + window-card */
+.device-screen { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; background: var(--blue-50); }
+.reveal .device-screen > img {
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: center top;      /* top-crop by default */
+  display: block; border: 0;
+}
+.device-screen[data-crop="center"] > img { object-position: center center; }
+.device-screen[data-crop="bottom"] > img { object-position: center bottom; }
+
+/* --- phone: rounded body + notch + bezel --- */
+.device-frame--phone {
+  aspect-ratio: 9 / 19;                                /* tall handset — gives the tall ratio a reason */
+  height: 100%; width: auto; max-width: 100%;
+  padding: 10px;                                       /* the bezel */
+  border-radius: 40px;                                 /* --radius token family, rounded body */
+  background: var(--neutral-900);                      /* device body (cool ink, not pure black) */
+  box-shadow: var(--elevation-4);
+}
+.device-frame--phone.is-floating { box-shadow: var(--elevation-5); }
+.device-frame--phone .device-screen { border-radius: 30px; }
+.device-frame--phone .device-screen > img { border-radius: 30px; }
+.device-frame--phone .device-frame__notch {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 2;
+  width: 42%; height: 22px;
+  background: var(--neutral-900);
+  border-bottom-left-radius: var(--radius-md); border-bottom-right-radius: var(--radius-md);
+}
+/* when a phone frame holds a caption, the caption sits OUTSIDE the body */
+.device-frame--phone > .caption { position: absolute; left: 0; right: 0; bottom: -26px; margin: 0; text-align: center; }
+
+/* --- window-card: mac browser chrome + cover top-crop --- */
+.window-card {
+  width: 100%;
+  border-radius: var(--radius-lg); overflow: hidden;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--elevation-3);
+}
+.window-card.is-floating { box-shadow: var(--elevation-4); }
+.window-card__bar {
+  flex: 0 0 auto; display: flex; align-items: center; gap: var(--space-3);
+  height: 34px; padding: 0 var(--space-4);
+  background: var(--neutral-100); border-bottom: 1px solid var(--border-subtle);
+}
+.window-card--desk .window-card__bar { height: 40px; }
+.window-card__dots { display: inline-flex; gap: 7px; flex: 0 0 auto; }
+.window-card__dots i { width: 11px; height: 11px; border-radius: 50%; background: var(--neutral-300); display: block; }
+.window-card__dots i:nth-child(1) { background: var(--danger-600); }
+.window-card__dots i:nth-child(2) { background: var(--warning-500); }
+.window-card__dots i:nth-child(3) { background: var(--success-500); }
+.window-card__url {
+  flex: 1 1 auto; min-width: 0;
+  font-family: var(--font-body); font-size: var(--body-xs); line-height: 1; color: var(--fg-muted);
+  text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  background: var(--bg-surface); border-radius: var(--radius-pill);
+  padding: 5px var(--space-4); margin-right: 44px;     /* offset for the dots so the url reads centered */
+}
+.window-card .device-screen { border-radius: 0; }
+
+/* -----------------------------------------------------------
+   11.3 DUOTONE utility (CSS-only) — grayscale the supporting cast,
+   then multiply a brand-blue wash over it. Reserve full colour for
+   money shots. Applied via assetFrame({ treatment:"duotone" }).
+----------------------------------------------------------- */
+.media--duotone > img { filter: grayscale(1) contrast(1.05); }
+.media--duotone::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: var(--fmnts-primary);
+  mix-blend-mode: multiply; opacity: 0.55;
+  border-radius: inherit;
+}
+/* keep any badge/caption above the wash */
+.media--duotone > .asset-badge, .media--duotone > .caption { z-index: 2; }
+
+/* -----------------------------------------------------------
+   11.4 ENTRANCE for bento tiles + meter (compositor-only; dense stagger).
+   Default is the reduced/static state (visible); motion is the enhancement
+   and only plays on the present live slide — exactly like §6 .anim.
+   The .anim class on tiles already drives the fade-up; this only tightens
+   the cadence for the dense collection per §2.3 (--stagger-tight).
+----------------------------------------------------------- */
+.reveal .slides section.present .bento-tile.anim {
+  animation-delay: calc(var(--anim-step, 0) * var(--stagger-tight, 45ms));
+}
+/* the meter fill grows once on entry (scaleX — never width) */
+@keyframes bento-meter-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.reveal .slides section.present .bento-meter__fill {
+  animation: bento-meter-fill var(--dur-count, 900ms) var(--ease-orbit) both;
+}
+
+/* -----------------------------------------------------------
+   11.5 DEGRADATION GUARDS — every new visual flattens to a fully
+   visible static state. Mirrors the §6/§8/§10 gates exactly.
+----------------------------------------------------------- */
+/* reduced-motion: no meter tween, no tile-delay churn (tiles already handled by §6 .anim gate) */
+@media (prefers-reduced-motion: reduce) {
+  .reveal .slides section.present .bento-meter__fill { animation: none !important; transform: none !important; }
+  .reveal .slides section.present .bento-tile.anim { animation-delay: 0ms !important; }
+}
+/* print/pdf export: final state, no motion — the board is fully visible on a static page */
+body.print-pdf .bento-meter__fill { animation: none !important; transform: none !important; }
+body.print-pdf .reveal .slides section .bento-tile.anim { animation: none !important; }
+/* peek thumbnails: freeze the meter tween (tiles inherit the §6/§8 .anim exploded-static gate) */
+body.is-peek .bento-meter__fill { animation: none !important; transform: none !important; }
+
+/* =========================================================================
+   §12 FLAGSHIP SLIDE REDESIGNS (masterplan §3.2) — fill the canvas top→bottom,
+   integrate photos via device frames / cover-crop / duotone, and give each
+   slide one signature move. Brand tokens ONLY. Every effect degrades to a
+   fully-visible static state under body.print-pdf, body.is-peek, and
+   prefers-reduced-motion (guards mirror §6/§8/§10/§11 at the end).
+   Slides: 04 ambassador · 08 content-wall · 03 funnel left column · 10 timeline.
+   ========================================================================= */
+
+/* -----------------------------------------------------------
+   12.1 SLIDE 04 — AMBASSADOR (projectVisual/hero). LIVE post in a phone rail;
+   the right column fills with planned thumbs + a metrics strip + the banner.
+----------------------------------------------------------- */
+.project--amb {
+  display: grid;
+  grid-template-columns: minmax(0, 3.6fr) minmax(0, 6.4fr);
+  column-gap: 44px; align-items: stretch; min-height: 0;
+}
+
+/* left rail: the LIVE post seated in a phone, overlapping the kicker rule for
+   editorial depth. The connector hairline runs from the LIVE badge rightward. */
+.amb-live {
+  position: relative; min-height: 0; display: flex; align-items: stretch; justify-content: flex-start;
+  margin-top: -12px;                                   /* overlap the kicker rule (§3.2 #2 depth) */
+}
+.reveal .project--amb .amb-live .device-frame--phone { height: 100%; }
+/* hairline connector: LIVE badge → first PLANNED thumb ("a series, not a one-off") */
+.amb-connector {
+  position: absolute; top: 26px; right: -44px; width: 44px; height: 2px;
+  background: linear-gradient(90deg, var(--success-500), var(--fmnts-primary-50));
+  z-index: 2; transform-origin: left center;
+}
+
+/* right column: three stacked rows — thumbs (grow) · metrics · banner */
+.amb-side {
+  min-width: 0; min-height: 0; display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto; row-gap: 18px; align-content: start;
+}
+.amb-side__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
+.amb-side__label {
+  font-family: var(--font-body); font-weight: 600; text-transform: uppercase;
+  font-size: var(--overline); letter-spacing: 0.24em; color: var(--fg-subtle);
+}
+/* cadence chip — pulses ONCE on entry (the active glow-ring keyframe) */
+.amb-cadence {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-family: var(--font-body); font-weight: 600; font-size: var(--body-sm); color: var(--fmnts-primary);
+  background: var(--blue-100); border-radius: var(--radius-pill); padding: 5px 14px;
+}
+.amb-cadence__pulse {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--fmnts-primary); flex: 0 0 auto;
+}
+
+/* planned thumbs — a browsable row; PLANNED ghost treatment so the LIVE hero pops */
+.amb-thumbs { min-height: 0; display: flex; gap: 16px; align-items: stretch; overflow: hidden; }
+.amb-thumb { min-height: 0; flex: 1 1 0; display: flex; transition: transform var(--dur-normal) var(--ease-orbit); }
+.reveal .amb-thumb .asset-frame { height: 100%; width: 100%; box-shadow: var(--elevation-2); }
+.amb-thumb--planned .asset-frame > img { filter: grayscale(0.3) opacity(0.85); }   /* semantic "planned" */
+.amb-thumb:hover { transform: translateY(-4px); }
+.amb-thumb:hover .asset-frame > img { filter: none; }                              /* preview on hover */
+
+/* metrics strip — 3 Chillax stat pills (count-up); the reactions one is the accent */
+.amb-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.amb-metric {
+  display: grid; grid-template-columns: auto auto; align-items: baseline; gap: 2px var(--space-2);
+  background: var(--bg-surface); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md); box-shadow: var(--elevation-1); padding: 12px 16px;
+}
+.amb-metric__value {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1; font-weight: 600;
+  font-size: var(--h2); line-height: 1; color: var(--fmnts-primary);
+}
+.amb-metric__unit {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1; font-weight: 600;
+  font-size: var(--h4); color: var(--fmnts-primary); align-self: baseline;
+}
+.amb-metric__label { grid-column: 1 / -1; font-size: var(--body-sm); color: var(--fg-muted); }
+.amb-metric--accent .amb-metric__value, .amb-metric--accent .amb-metric__unit { color: var(--fmnts-secondary); }
+
+/* banner — a true full-width cover strip inside browser chrome */
+.amb-band { min-width: 0; }
+.reveal .amb-band .window-card { width: 100%; }
+.reveal .amb-band .device-screen { height: 92px; }
+
+/* -----------------------------------------------------------
+   12.2 SLIDE 08 — CONTENT WALL (projectVisual/masonry → real bento).
+   ONE feature column (cover-crop) + a 2×2 supporting cluster + a "+N more" ghost.
+----------------------------------------------------------- */
+.project--wall { display: block; }
+.content-wall {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) repeat(2, minmax(0, 3.5fr));
+  grid-template-rows: 1fr 1fr;
+  gap: 20px;
+}
+/* feature tile spans the full-height left column (the ONE dominant post) */
+.wall-tile--feature { grid-column: 1; grid-row: 1 / span 2; margin-top: -12px; }  /* overlap the lead line */
+.wall-tile { position: relative; min-width: 0; min-height: 0; display: flex; }
+.reveal .wall-tile .asset-frame,
+.reveal .wall-tile .device-frame { width: 100%; height: 100%; min-height: 0; box-shadow: var(--elevation-2); }
+.reveal .wall-tile--feature .device-frame { box-shadow: var(--elevation-3); }
+.wall-tile .asset-frame > img { transition: transform var(--dur-normal) var(--ease-orbit); }
+/* supporting posts fill their card (cover-crop) — kills the floating-thumbnail look */
+.wall-tile:not(.wall-tile--feature) .asset-frame > img { object-fit: cover; }
+.wall-tile:hover .asset-frame > img { transform: scale(1.02); }
+
+/* small channel glyph top-left of each post = live feed */
+.wall-tile__channel {
+  position: absolute; top: 10px; left: 10px; z-index: 3;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--bg-surface); box-shadow: var(--elevation-2);
+  display: grid; place-items: center; color: var(--fmnts-primary);
+}
+.wall-tile__channel svg { width: 15px; height: 15px; stroke: currentColor; fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* the "+N more this quarter" ghost tile — dashed, Chillax numeral, fills the last cell */
+.wall-tile--more {
+  flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--space-1);
+  padding: var(--space-5) var(--space-6);
+  background: transparent; border: 1px dashed var(--border-default); border-radius: var(--radius-lg);
+}
+.wall-more__value {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1; font-weight: 700;
+  font-size: var(--display-sm); line-height: 1; color: var(--fmnts-primary);
+}
+.wall-more__label { font-size: var(--body-sm); line-height: var(--body-sm-lh); color: var(--fg-muted); }
+
+/* -----------------------------------------------------------
+   12.3 SLIDE 03 — FUNNEL left column (campaignAnalysis): 2×2 metric-card grid
+   + a "Next step" callout. Keeps the interactive funnel (data-fx) untouched.
+----------------------------------------------------------- */
+.analysis__side { padding-top: 0; display: grid; grid-template-rows: auto auto; row-gap: var(--space-5); align-content: start; }
+.metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.metric-card {
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--bg-surface); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md); box-shadow: var(--elevation-1); padding: var(--space-4) var(--space-5);
+}
+.metric-card__value {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1; font-weight: 600;
+  font-size: var(--h1); line-height: 1; color: var(--fmnts-primary);
+}
+.metric-card__label { font-size: var(--body-sm); line-height: var(--body-sm-lh); color: var(--fg-muted); }
+/* the SINGLE red stopper — hot leads; pulses once on entry so the eye lands on the money metric.
+   The pulse rides a ::after ring so the card's own .anim opacity entrance is never clobbered. */
+.metric-card--accent { position: relative; border-color: var(--fmnts-secondary-50); }
+.metric-card--accent .metric-card__value { color: var(--fmnts-secondary); }
+.metric-card--accent .metric-card__label { color: var(--fmnts-secondary-75); }
+.metric-card--accent::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+}
+
+/* "Next step" callout — blue-100 field + the ONE sanctioned primary keyline */
+.analysis-next {
+  position: relative; background: var(--blue-100); border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5) var(--space-4) var(--space-6);
+  display: flex; flex-direction: column; gap: 3px;
+}
+.analysis-next::before {
+  content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px;
+  border-radius: var(--radius-pill); background: var(--fmnts-primary);
+}
+.analysis-next__eyebrow {
+  font-family: var(--font-body); font-weight: 600; text-transform: uppercase;
+  font-size: var(--overline); letter-spacing: 0.22em; color: var(--fmnts-primary);
+}
+.analysis-next__detail { font-size: var(--body-md); line-height: var(--body-md-lh); color: var(--fg-default); font-weight: 600; }
+.analysis-next__when {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1;
+  font-size: var(--body-sm); color: var(--fg-muted);
+}
+
+/* -----------------------------------------------------------
+   12.4 SLIDE 10 — TIMELINE LANES (nextSteps). Two horizontal tracks running
+   near-term → Q3; active lane forward, ongoing lane dashed. A red "today"
+   marker anchors the left edge (the one stopper).
+----------------------------------------------------------- */
+.nextsteps--timeline {
+  display: grid; grid-template-columns: 1fr;          /* override §4 2-col → full-width lanes */
+  grid-template-rows: 1fr 1fr; row-gap: var(--space-8); align-content: stretch;
+}
+.ns-lane { position: relative; min-height: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.ns-lane__head { display: flex; align-items: center; gap: var(--space-3); }
+.ns-lane__dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+.ns-lane--active  .ns-lane__dot { background: var(--fmnts-primary); box-shadow: 0 0 0 4px rgba(0,116,200,0.15); }
+.ns-lane--ongoing .ns-lane__dot { background: var(--fg-subtle); }
+.ns-lane__title {
+  font-family: var(--font-body); font-weight: 600; text-transform: uppercase;
+  font-size: var(--overline); letter-spacing: 0.22em; color: var(--fg-muted);
+}
+
+/* the track: a full-width rail with evenly-spread nodes (fills L→R) */
+.ns-lane__track { position: relative; flex: 1 1 auto; min-height: 0; display: flex; align-items: center; }
+.ns-lane__rail {
+  position: absolute; left: 0; right: 0; top: 22px; height: 2px; z-index: 0;
+}
+.ns-lane--active  .ns-lane__rail { background: linear-gradient(90deg, var(--fmnts-primary), var(--fmnts-primary-25)); }
+.ns-lane--ongoing .ns-lane__rail { background: none; border-top: 2px dashed var(--border-default); height: 0; }
+.ns-lane__nodes {
+  position: relative; z-index: 1; flex: 1 1 auto;
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; align-items: start; gap: var(--space-3);
+}
+.ns-node { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); min-width: 0; padding-right: var(--space-3); }
+.ns-node__dot {
+  width: 13px; height: 13px; border-radius: 50%; flex: 0 0 auto;
+  background: var(--bg-surface); border: 2px solid var(--fmnts-primary); box-shadow: var(--elevation-1);
+}
+.ns-lane--ongoing .ns-node__dot { border-color: var(--fg-subtle); }
+.ns-node__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ns-node__icon { color: var(--fmnts-primary); }
+.ns-node__icon svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ns-lane--ongoing .ns-node__icon { color: var(--fg-muted); }
+.ns-node__text { font-size: var(--body-sm); line-height: var(--body-sm-lh); color: var(--fg-default); }
+.ns-lane--ongoing .ns-node__text { color: var(--fg-muted); }
+.ns-node__when {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1;
+  font-size: var(--body-xs); color: var(--fmnts-primary); font-weight: 600;
+  background: var(--blue-100); border-radius: var(--radius-pill); padding: 2px 8px; align-self: flex-start;
+}
+.ns-lane--ongoing .ns-node__when { color: var(--fg-muted); background: var(--neutral-100); }
+
+/* the "today" marker — a thin red vertical line anchoring the left edge (the one
+   stopper). Starts just below the first lane header (at the rail) and runs down
+   through both lanes so it reads as a shared "now" origin for the timeline. */
+.ns-today {
+  position: absolute; left: -2px; top: 40px; bottom: 6px; width: 2px; z-index: 2;
+  background: var(--fmnts-secondary);
+}
+.ns-today__label {
+  position: absolute; top: -16px; left: 6px;
+  font-family: var(--font-body); font-weight: 700; text-transform: uppercase;
+  font-size: var(--overline-sm); letter-spacing: 0.16em; color: var(--fmnts-secondary); white-space: nowrap;
+}
+
+/* -----------------------------------------------------------
+   12.5 SIGNATURE PULSES — one-shot, compositor-only (transform/opacity),
+   gated to the present live slide. Default = final visible state.
+----------------------------------------------------------- */
+@keyframes fmnts-pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(0,116,200,0.45); }
+  70%  { box-shadow: 0 0 0 10px rgba(0,116,200,0); }
+  100% { box-shadow: 0 0 0 0 rgba(0,116,200,0); }
+}
+@keyframes fmnts-pulse-ring-red {
+  0%   { box-shadow: 0 0 0 0 rgba(224,59,80,0.40); }
+  70%  { box-shadow: 0 0 0 12px rgba(224,59,80,0); }
+  100% { box-shadow: 0 0 0 0 rgba(224,59,80,0); }
+}
+@keyframes fmnts-connector-draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+/* cadence chip dot pulses once ~700ms after entry */
+.reveal .slides section.present .amb-cadence__pulse {
+  animation: fmnts-pulse-ring 1400ms var(--ease-orbit) 700ms 1 both;
+}
+/* the LIVE→PLANNED connector draws once */
+.reveal .slides section.present .amb-connector {
+  animation: fmnts-connector-draw var(--dur-slower) var(--ease-orbit) 500ms both;
+}
+/* the red hot-lead card pulses once so the eye lands on the money metric
+   (on the ::after ring — the card's .anim entrance stays intact) */
+.reveal .slides section.present .metric-card--accent::after {
+  animation: fmnts-pulse-ring-red 1600ms var(--ease-orbit) 900ms 1 both;
+}
+
+/* -----------------------------------------------------------
+   12.6 DEGRADATION GUARDS — flatten every §12 effect to a fully-visible
+   static state. Mirrors §6/§8/§10/§11 exactly.
+----------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .amb-thumb { transition: none !important; }
+  .wall-tile .asset-frame > img { transition: none !important; }
+  .reveal .slides section.present .amb-cadence__pulse,
+  .reveal .slides section.present .amb-connector,
+  .reveal .slides section.present .metric-card--accent::after { animation: none !important; }
+  .amb-connector { transform: none !important; }
+}
+body.print-pdf .amb-cadence__pulse,
+body.print-pdf .amb-connector,
+body.print-pdf .metric-card--accent::after { animation: none !important; }
+body.print-pdf .amb-connector { transform: none !important; }
+body.is-peek .amb-cadence__pulse,
+body.is-peek .amb-connector,
+body.is-peek .metric-card--accent::after { animation: none !important; }
+body.is-peek .amb-connector { transform: none !important; }
