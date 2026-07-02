@@ -10,5 +10,6 @@
    never renders broken.
    ============================================================ */
 export const manifest = [
+  "2026-07-02-ai-pitchdecks",
   "2026-07-01",
 ];

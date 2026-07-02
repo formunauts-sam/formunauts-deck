@@ -28,6 +28,9 @@ export const RATIO = {
   "reinhard-planned-4.png": "ratio-amb-portrait",
   "reinhard-linkedin-banner.png": "ratio-li-banner",
   "barbara-card-proof.png": "ratio-card-proof",
+  "beispiel-cover.jpg": "ratio-tablet-portrait",
+  "beispiel-zitat.jpg": "ratio-tablet-portrait",
+  "beispiel-boarding.jpg": "ratio-tablet-portrait",
 };
 
 /* --- Per-file intrinsic pixel dims → <img width/height> (kills CLS). --- */
@@ -44,6 +47,9 @@ export const PX = {
   "reinhard-planned-4.png": [890, 1108],
   "reinhard-linkedin-banner.png": [3168, 792],
   "barbara-card-proof.png": [2198, 745],
+  "beispiel-cover.jpg": [1668, 2388],
+  "beispiel-zitat.jpg": [1668, 2388],
+  "beispiel-boarding.jpg": [1668, 2388],
 };
 
 /* Aspect-ratio classes keyed by ratio-name so a per-tile aspect can be
@@ -56,6 +62,7 @@ const RATIO_DIMS = {
   "ratio-amb-intro": [914, 1658],
   "ratio-li-banner": [3168, 792],
   "ratio-card-proof": [2198, 745],
+  "ratio-tablet-portrait": [834, 1194],
 };
 
 /* Intrinsic pixel dims for the product-ui / web captures deviceFrame consumes.
@@ -70,6 +77,9 @@ export const DEVICE_PX = {
   "photo-verification-1.png": [1200, 1800],
   "photo-verification-2.png": [1224, 1836],
   "photo-verification-3.png": [1224, 1836],
+  "beispiel-cover.jpg": [1668, 2388],
+  "beispiel-zitat.jpg": [1668, 2388],
+  "beispiel-boarding.jpg": [1668, 2388],
 };
 
 /*

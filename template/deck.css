@@ -131,6 +131,7 @@
 .ratio-card-proof    { aspect-ratio: 2198 / 745; }  /* business-card proof front+back 2.95 */
 .ratio-keyvisual     { aspect-ratio: 4000 / 1415;}  /* key-visual / wide claim (if ever used) */
 .ratio-marketing     { aspect-ratio: 660 / 1173; }  /* marketing-photo.jpg (circular/cover only) */
+.ratio-tablet-portrait { aspect-ratio: 834 / 1194; } /* KT: Amref-Deck Tablet-Screenshots 1668×2388 ≈ 0.70 */
 
 /* Corner badge on a frame (LIVE / PLANNED) */
 .asset-badge {
