@@ -1,0 +1,253 @@
+/* ============================================================
+   Formunauts Design System — _base.css
+   ------------------------------------------------------------
+   The stylesheet EVERY generated artifact links. It is self-sufficient:
+   it carries the full :root token set (copied from colors_and_type.css)
+   plus @font-face rules whose url() is RELATIVE to THIS file.
+
+   PORTABLE BUILD CONVENTION (critical):
+   CSS @font-face URLs resolve relative to the CSS file, not the HTML.
+   So this file must always sit in a job dir next to a ./fonts/ folder:
+
+     out/<job>/
+       _base.css      <- this file
+       fonts/         <- the 10 brand font files
+       img/           <- only the logo/keyvisual/photo this artifact uses
+       artifact.html  <- <link rel="stylesheet" href="_base.css">
+
+   Then url("./fonts/Figtree-Regular.ttf") resolves correctly with no
+   machine paths and no %20 space issues.
+
+   font-display: block  -> Chrome WAITS for the font (no FOUT / no system
+   fallback flashing into a screenshot). Verified in research note 06 §2.
+   ============================================================ */
+
+/* ---------- Fonts (RELATIVE url, font-display: block) ----- */
+@font-face {
+  font-family: "Figtree";
+  src: url("./fonts/Figtree-Regular.ttf") format("truetype");
+  font-weight: 400; font-style: normal; font-display: block;
+}
+@font-face {
+  font-family: "Figtree";
+  src: url("./fonts/Figtree-Italic.ttf") format("truetype");
+  font-weight: 400; font-style: italic; font-display: block;
+}
+@font-face {
+  font-family: "Figtree";
+  src: url("./fonts/Figtree-Medium.ttf") format("truetype");
+  font-weight: 500; font-style: normal; font-display: block;
+}
+@font-face {
+  font-family: "Figtree";
+  src: url("./fonts/Figtree-SemiBold.ttf") format("truetype");
+  font-weight: 600; font-style: normal; font-display: block;
+}
+@font-face {
+  font-family: "Figtree";
+  src: url("./fonts/Figtree-Bold.ttf") format("truetype");
+  font-weight: 700; font-style: normal; font-display: block;
+}
+@font-face {
+  font-family: "Figtree";
+  src: url("./fonts/Figtree-ExtraBold.ttf") format("truetype");
+  font-weight: 800; font-style: normal; font-display: block;
+}
+@font-face {
+  font-family: "Chillax";
+  src: url("./fonts/Chillax-Regular.otf") format("opentype");
+  font-weight: 400; font-style: normal; font-display: block;
+}
+@font-face {
+  font-family: "Chillax";
+  src: url("./fonts/Chillax-Medium.otf") format("opentype");
+  font-weight: 500; font-style: normal; font-display: block;
+}
+@font-face {
+  font-family: "Chillax";
+  src: url("./fonts/Chillax-Semibold.otf") format("opentype");
+  font-weight: 600; font-style: normal; font-display: block;
+}
+@font-face {
+  font-family: "Chillax";
+  src: url("./fonts/Chillax-Bold.otf") format("opentype");
+  font-weight: 700; font-style: normal; font-display: block;
+}
+
+/* ---------- Tokens (verbatim copy from colors_and_type.css) */
+:root {
+  /* ---------- Brand colors (per Brandbook) --------------- */
+  --fmnts-primary:        #0074C8;   /* RGB 0/116/200  — primary brand blue */
+  --fmnts-primary-dark:   #054D85;   /* darker primary used in headers      */
+  --fmnts-primary-mid:    #0074BE;   /* fill variant in app                  */
+  --fmnts-secondary:      #E03B50;   /* RGB 224/59/80 — accent / stoppers   */
+
+  /* Primary tints (75 / 50 / 25 from brandbook) */
+  --fmnts-primary-75:  #4096D6;
+  --fmnts-primary-50:  #80B9E3;
+  --fmnts-primary-25:  #BFDCF1;
+  --fmnts-secondary-75:#E76475;
+  --fmnts-secondary-50:#EF8C97;
+  --fmnts-secondary-25:#F7C5CB;
+
+  /* Primary scale (from product Figma) */
+  --blue-50:  #F3F8FD;
+  --blue-100: #E3F0FF;
+  --blue-200: #DDEEFB;
+  --blue-300: #AFD2F8;
+  --blue-500: #0074C8;
+  --blue-600: #0074BE;
+  --blue-700: #054D85;
+
+  /* ---------- Neutrals ----------------------------------- */
+  --neutral-0:    #FFFFFF;
+  --neutral-50:   #F8F9FA;   /* page bg / muted surface */
+  --neutral-100:  #F2F4F5;
+  --neutral-150:  #EDF0F3;   /* hairline / divider */
+  --neutral-200:  #ECF0F3;
+  --neutral-300:  #D5DDE5;   /* default border */
+  --neutral-400:  #AFBECD;
+  --neutral-500:  #99A9B3;
+  --neutral-600:  #6D7B8A;   /* secondary text */
+  --neutral-700:  #3E4C5A;   /* primary text on light */
+  --neutral-800:  #212934;
+  --neutral-900:  #1E2A33;   /* near-black */
+  --neutral-1000: #000F1A;
+
+  /* Black tints (per OKLCH page) */
+  --black-06: rgba(0,15,26,.06);
+  --black-10: rgba(0,15,26,.10);
+
+  /* ---------- Semantic ----------------------------------- */
+  --success-100: #EAF3EB;
+  --success-300: #B7DDC2;
+  --success-500: #1F8643;
+  --success-700: #0F5527;
+
+  --warning-100: #FEF9E6;
+  --warning-300: #FEEAB4;
+  --warning-500: #E0A82E;
+  --warning-700: #8A5A00;
+
+  --danger-100:  #FBE8E5;
+  --danger-300:  #F3B8B8;
+  --danger-500:  #D41303;
+  --danger-600:  #E03B50;
+  --danger-700:  #8A0E00;
+
+  /* ---------- Accents (gamification / patterns) ---------- */
+  --purple-100: #F1EEF8;
+  --purple-500: #9747FF;
+  --purple-600: #765EB7;
+  --pink-500:   #DF5DB1;
+  --yellow-amber: #FEEAB4;
+
+  /* ---------- Semantic role tokens ----------------------- */
+  --bg-base:        var(--neutral-50);
+  --bg-surface:     var(--neutral-0);
+  --bg-muted:       var(--neutral-100);
+  --bg-inverse:     var(--neutral-900);
+
+  --fg-default:     var(--neutral-900);   /* body */
+  --fg-muted:       var(--neutral-600);   /* secondary copy */
+  --fg-subtle:      var(--neutral-400);   /* placeholder */
+  --fg-inverse:     var(--neutral-0);
+  --fg-link:        var(--fmnts-primary);
+  --fg-on-primary:  var(--neutral-0);
+
+  --border-default: var(--neutral-300);
+  --border-subtle:  var(--neutral-150);
+  --border-strong:  var(--neutral-400);
+  --border-focus:   var(--fmnts-primary);
+
+  /* ---------- Elevation (5 step) ------------------------- */
+  --elevation-1: 0 2.33px 5px -1px rgba(213,221,229,1);
+  --elevation-2: 0 4px 6px -1px rgba(48,48,48,.10), 0 2px 4px -2px rgba(48,48,48,.10);
+  --elevation-3: 0 10px 15px -3px rgba(0,0,0,.10), 0 4px 6px -4px rgba(0,0,0,.10);
+  --elevation-4: 0 20px 25px -5px rgba(0,0,0,.10), 0 8px 10px -6px rgba(0,0,0,.10);
+  --elevation-5: 0 25px 50px -12px rgba(0,0,0,.25);
+
+  /* ---------- Radii -------------------------------------- */
+  --radius-xs:  4px;
+  --radius-sm:  8px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-xl:  20px;
+  --radius-2xl: 24px;
+  --radius-pill: 9999px;
+
+  /* ---------- Spacing scale (4-pt grid) ------------------ */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ---------- Type families ------------------------------ */
+  --font-body: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Chillax", "Figtree", sans-serif;   /* logo, accents, numerals */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* ---------- Type scale (display) ----------------------- */
+  --display-2xl-size: 96px;  --display-2xl-lh: 96px;
+  --display-xl-size:  80px;  --display-xl-lh:  96px;
+  --display-lg-size:  64px;  --display-lg-lh:  78px;
+  --display-md-size:  48px;  --display-md-lh:  56px;
+  --display-sm-size:  36px;  --display-sm-lh:  48px;
+
+  /* Headings */
+  --h1-size: 40px;  --h1-lh: 48px;
+  --h2-size: 32px;  --h2-lh: 44px;
+  --h3-size: 24px;  --h3-lh: 32px;
+  --h4-size: 20px;  --h4-lh: 28px;
+  --h5-size: 18px;  --h5-lh: 26px;
+  --h6-size: 16px;  --h6-lh: 24px;
+
+  /* Body */
+  --body-lg-size: 18px; --body-lg-lh: 28px;
+  --body-md-size: 16px; --body-md-lh: 26px;
+  --body-sm-size: 14px; --body-sm-lh: 22px;
+  --body-xs-size: 12px; --body-xs-lh: 18px;
+
+  /* Overline (per Brandbook — wide tracking) */
+  --overline-size: 11px; --overline-lh: 15px; --overline-tracking: 0.30em;
+  --overline-sm-size: 8px; --overline-sm-lh: 10px; --overline-sm-tracking: 0.30em;
+}
+
+/* ============================================================
+   Global resets + print-color fidelity
+   - print-color-adjust:exact keeps brand backgrounds in PDF print
+     (Chrome drops bg colors/images by default to save ink — research 06 §3).
+   ============================================================ */
+html, body {
+  margin: 0;
+  padding: 0;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  font-family: var(--font-body);
+  color: var(--fg-default);
+  background: var(--bg-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+*, *::before, *::after { box-sizing: border-box; }
+
+/* ---------- Lean helper utilities ---------------------------
+   Keep these minimal; full type/component presets live in
+   colors_and_type.css which artifacts may also link if needed.
+   ------------------------------------------------------------ */
+.font-body    { font-family: var(--font-body); }
+.font-display { font-family: var(--font-display); }
+.font-num     { font-family: var(--font-display); font-feature-settings: "tnum" 1; }
+.text-primary { color: var(--fmnts-primary); }
+.text-inverse { color: var(--fg-inverse); }
+.bg-primary   { background: var(--fmnts-primary); color: var(--fg-on-primary); }
+.bg-surface   { background: var(--bg-surface); }

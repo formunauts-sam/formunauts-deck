@@ -1,0 +1,693 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Pitchdecks — Der CC-Guide · FORMUNAUTS</title>
+<!--
+  FORMUNAUTS Knowledge-Transfer-Deck — bewusst OHNE JavaScript gebaut.
+  Navigation: scrollen, Pfeiltasten/Leertaste oder tippen (Anker-Overlay).
+  Genau die Technik, die das CC-Team für Kunden-Pitchdecks nutzt.
+  Druck/PDF: eine Slide = eine Seite (13.333 x 7.5 in).
+-->
+<link rel="stylesheet" href="_base.css">
+<style>
+  :root{
+    --stage-w: 1280px;
+    --stage-h: 720px;
+    --safe: var(--space-16);
+    --viewport-bg: var(--neutral-1000);
+  }
+  html{
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+  }
+  @supports (-webkit-touch-callout: none){
+    html{ scroll-snap-type: y proximity; }
+  }
+  body{
+    background: var(--viewport-bg);
+    color: var(--fg-default);
+    font-family: var(--font-body);
+    margin: 0;
+  }
+  /* ---- Frame = ein Viewport, Stage = die 1280x720-Folie ---- */
+  .frame{
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .stage{
+    position: relative;
+    width: var(--stage-w);
+    height: var(--stage-h);
+    flex: 0 0 auto;
+    overflow: hidden;
+    background: var(--bg-surface);
+    color: var(--fg-default);
+    border-radius: var(--radius-md);
+    box-shadow: var(--elevation-5);
+  }
+  @media (max-width: 1339px), (max-height: 779px){ .stage{ transform: scale(.8); } }
+  @media (max-width: 1079px), (max-height: 649px){ .stage{ transform: scale(.62); } }
+  @media (max-width: 839px){ .stage{ transform: scale(.46); } }
+  @media (max-width: 619px){ .stage{ transform: scale(.30); } }
+
+  .safe{ position: absolute; inset: var(--safe); display: flex; flex-direction: column; }
+
+  /* ---- Tap-to-advance: unsichtbarer Anker über der Slide ---- */
+  .advance{
+    position: absolute; inset: 0; z-index: 2;
+    display: block; text-indent: -9999px; overflow: hidden;
+  }
+  .hint{
+    position: absolute; left: 50%; bottom: var(--space-4); z-index: 3;
+    transform: translateX(-50%);
+    color: var(--neutral-400); pointer-events: none;
+    font-size: var(--body-xs-size); line-height: var(--body-xs-lh);
+    letter-spacing: 0.30em; text-transform: uppercase;
+    animation: bob 2.4s ease-in-out infinite;
+  }
+  @keyframes bob{ 0%,100%{ transform: translateX(-50%) translateY(0) } 50%{ transform: translateX(-50%) translateY(6px) } }
+  @media (prefers-reduced-motion: reduce){ .hint{ animation: none; } }
+
+  /* ---- Chrome-Modi ---- */
+  .stage[data-bg="canvas"]{ background: var(--bg-base); }
+  .stage[data-chrome="dark"]{ background: var(--neutral-900); color: var(--fg-inverse); }
+  .stage[data-chrome="dark"] .muted{ color: var(--blue-100); }
+  .stage:not([data-chrome="dark"]) .muted{ color: var(--neutral-700); }
+
+  /* ---- Primitives ---- */
+  .overline{
+    font-family: var(--font-body); font-weight: 600;
+    font-size: var(--overline-size); line-height: var(--overline-lh);
+    letter-spacing: var(--overline-tracking); text-transform: uppercase;
+    color: var(--fmnts-primary);
+  }
+  .stage[data-chrome="dark"] .overline{ color: var(--blue-100); }
+  .slide-title{
+    font-family: var(--font-body); font-weight: 600;
+    font-size: var(--h2-size); line-height: var(--h2-lh); letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .subhead{ font-family: var(--font-body); font-weight: 600; font-size: var(--h3-size); line-height: var(--h3-lh); margin: 0; }
+  .display{ font-family: var(--font-display); font-weight: 600; letter-spacing: -0.005em; margin: 0; }
+  .num{ font-family: var(--font-display); font-feature-settings: "tnum" 1; }
+  .body{ font-size: var(--body-lg-size); line-height: var(--body-lg-lh); margin: 0; }
+  p{ margin: 0; }
+
+  .rings{ position: absolute; pointer-events: none; right: -160px; bottom: -160px; width: 560px; height: 560px; }
+  .rings::before, .rings::after{
+    content: ""; position: absolute; inset: 0;
+    border-radius: var(--radius-pill); border: 1.5px solid var(--fmnts-primary); opacity: .12;
+  }
+  .rings::after{ inset: 96px; opacity: .20; }
+  .stage[data-chrome="dark"] .rings::before,
+  .stage[data-chrome="dark"] .rings::after{ border-color: var(--fmnts-primary-75); opacity: .32; }
+  .rings.tr{ right: -180px; bottom: auto; top: -180px; }
+
+  .bullets{ list-style: none; display: flex; flex-direction: column; gap: var(--space-4); margin: 0; padding: 0; }
+  .bullets li{
+    position: relative; padding-left: var(--space-8);
+    font-size: var(--body-lg-size); line-height: var(--body-lg-lh); max-width: 860px;
+  }
+  .bullets li::before{
+    content: ""; position: absolute; left: 0; top: 11px;
+    width: var(--space-2); height: var(--space-2);
+    border-radius: var(--radius-xs); background: var(--fmnts-primary);
+  }
+
+  .footer{
+    position: absolute; left: var(--safe); right: var(--safe); bottom: var(--space-8);
+    height: 24px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .footer img{ height: 14px; width: auto; display: block; }
+  .footer .page{
+    font-family: var(--font-display); font-feature-settings: "tnum" 1;
+    font-size: var(--body-xs-size); line-height: 1; color: var(--neutral-700);
+  }
+
+  .card{
+    background: var(--bg-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--elevation-2);
+    padding: var(--space-6);
+  }
+
+  .agrow{ display: flex; align-items: baseline; gap: var(--space-6); border-left: 4px solid var(--fmnts-primary); padding-left: var(--space-6); }
+  .agrow .n{ font-family: var(--font-display); font-feature-settings: "tnum" 1; font-size: var(--display-sm-size); line-height: var(--display-sm-lh); color: var(--fmnts-primary); width: 64px; flex: 0 0 auto; }
+  .agrow .t{ font-family: var(--font-body); font-weight: 600; font-size: var(--h4-size); line-height: var(--h4-lh); width: 320px; flex: 0 0 auto; }
+
+  /* ---- Scroll-Reveals: nur wo unterstützt, genau wie in euren Decks ---- */
+  @supports (animation-timeline: view()){
+    .safe > *{
+      animation: rise linear both;
+      animation-timeline: view();
+      animation-range: entry 15% entry 55%;
+    }
+  }
+  @keyframes rise{ from{ opacity: 0; transform: translateY(24px) } to{ opacity: 1; transform: translateY(0) } }
+  @media (prefers-reduced-motion: reduce){ .safe > *{ animation: none !important } }
+
+  /* ---- Druck: eine Slide = eine Seite ---- */
+  @page{ size: 13.333in 7.5in; margin: 0; }
+  @media print{
+    html{ scroll-snap-type: none; }
+    body{ background: var(--neutral-0); }
+    .frame{ display: block; min-height: 0; height: auto; }
+    .stage{
+      transform: none !important;
+      width: 13.333in; height: 7.5in;
+      border-radius: 0; box-shadow: none;
+      page-break-after: always; break-after: page;
+    }
+    .frame:last-child .stage{ page-break-after: auto; break-after: auto; }
+    .advance, .hint{ display: none !important; }
+    .safe > *{ animation: none !important; opacity: 1 !important; transform: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 01 · COVER -->
+<section class="frame" id="cover">
+  <div class="stage" data-chrome="dark">
+    <span class="rings" aria-hidden="true"></span>
+    <div class="safe" style="justify-content:flex-end">
+      <img src="img/logo-claim-3l-white.png" alt="FORMUNAUTS — The new standard for face-to-face" style="position:absolute;top:0;left:0;width:300px;height:auto">
+      <p class="overline" style="margin-bottom:var(--space-4)">Knowledge Transfer · Customer Care</p>
+      <h1 class="display" style="font-size:var(--display-xl-size);line-height:var(--display-xl-lh);max-width:900px">AI Pitchdecks.</h1>
+      <p class="body muted" style="margin-top:var(--space-5);max-width:680px">Von der Brand-Analyse zum fertigen Street-Pitch — mit Claude&nbsp;Code.</p>
+    </div>
+  </div>
+  <a class="advance" href="#ziel" aria-label="Weiter">Weiter</a>
+  <span class="hint" aria-hidden="true">Tippen oder scrollen</span>
+</section>
+
+<!-- 02 · DAS ZIEL -->
+<section class="frame" id="ziel">
+  <div class="stage" data-bg="canvas">
+    <div class="safe" style="justify-content:center">
+      <p class="display" style="font-size:var(--display-md-size);line-height:var(--display-md-lh);max-width:920px">Ein Deck. Ein Ziel.<br>Das Ja zur Dauerspende.</p>
+      <p class="body muted" style="margin-top:var(--space-8);max-width:720px">F2F-Pitch am Tablet · 60–90 Sekunden Aufmerksamkeit · jede Slide muss sofort wirken.</p>
+    </div>
+    <div class="footer">
+      <img src="img/logo-type-blue.png" alt="FORMUNAUTS">
+      <span class="page">02&nbsp;/&nbsp;21</span>
+    </div>
+  </div>
+  <a class="advance" href="#ergebnis" aria-label="Weiter">Weiter</a>
+</section>
+
+<!-- 03 · ERGEBNIS -->
+<section class="frame" id="ergebnis">
+  <div class="stage">
+    <div class="safe">
+      <p class="overline">Das bauen wir</p>
+      <h2 class="slide-title" style="margin-top:var(--space-3)">So sieht das Ergebnis aus</h2>
+      <div style="margin-top:var(--space-8);display:flex;gap:var(--space-8);align-items:flex-start">
+        <img src="img/beispiel-s1.jpg" alt="Amref-Deck: Cover-Slide" style="height:360px;width:auto;border-radius:var(--radius-lg);box-shadow:var(--elevation-3)">
+        <img src="img/beispiel-s4.jpg" alt="Amref-Deck: Zitat-Slide" style="height:360px;width:auto;border-radius:var(--radius-lg);box-shadow:var(--elevation-3)">
+        <img src="img/beispiel-s10.jpg" alt="Amref-Deck: Boarding-Pass-Slide" style="height:360px;width:auto;border-radius:var(--radius-lg);box-shadow:var(--elevation-3)">
+      </div>
+      <p class="body muted" style="position:absolute;bottom:88px;left:0">Amref Health Africa — mit Claude Code gebaut. HTML + CSS, offline, am Tablet. Referenz: <strong>_kit/beispiel/</strong></p>
+    </div>
+    <div class="footer">
+      <img src="img/logo-type-blue.png" alt="FORMUNAUTS">
+      <span class="page">03&nbsp;/&nbsp;21</span>
+    </div>
+  </div>
+  <a class="advance" href="#agenda" aria-label="Weiter">Weiter</a>
+</section>
+
+<!-- 04 · AGENDA -->
+<section class="frame" id="agenda">
+  <div class="stage">
+    <div class="safe">
+      <p class="overline">Agenda</p>
+      <h2 class="slide-title" style="margin-top:var(--space-3)">Heute in einer Stunde</h2>
+      <div style="margin-top:var(--space-10);display:flex;flex-direction:column;gap:var(--space-5)">
+        <div class="agrow"><span class="n">01</span><span class="t">Werkzeuge &amp; Setup</span><span class="body muted">Ein Tool, ein Ordner pro Kunde.</span></div>
+        <div class="agrow"><span class="n">02</span><span class="t">Der Workflow</span><span class="body muted">Fünf Schritte — vom Material bis zum Testen und Verpacken.</span></div>
+        <div class="agrow"><span class="n">03</span><span class="t">Die Prompt-Library</span><span class="body muted">Ein fertiger Prompt für jeden Schritt.</span></div>
+        <div class="agrow"><span class="n">04</span><span class="t">Die Übung</span><span class="body muted">Jetzt ihr — mit echtem Amref-Material.</span></div>
+      </div>
+    </div>
+    <div class="footer">
+      <img src="img/logo-type-blue.png" alt="FORMUNAUTS">
+      <span class="page">04&nbsp;/&nbsp;21</span>
+    </div>
+  </div>
+  <a class="advance" href="#d1" aria-label="Weiter">Weiter</a>
+</section>
+
+<!-- 05 · DIVIDER 01 -->
+<section class="frame" id="d1">
+  <div class="stage" data-chrome="dark">
+    <span class="rings tr" aria-hidden="true"></span>
+    <div class="safe" style="justify-content:center">
+      <span class="num" style="font-size:var(--display-2xl-size);line-height:var(--display-2xl-lh);color:var(--fmnts-primary-75);opacity:.9">01</span>
+      <h2 class="display" style="font-size:var(--h1-size);line-height:var(--h1-lh);margin-top:var(--space-4)">Werkzeuge &amp; Setup</h2>
+      <p class="body muted" style="margin-top:var(--space-4);max-width:640px">Ein Tool. Ein Ordner pro Kunde. Kein weiteres Setup.</p>
+    </div>
+  </div>
+  <a class="advance" href="#werkzeuge" aria-label="Weiter">Weiter</a>
+</section>
+
+<!-- 06 · WERKZEUGE -->
+<section class="frame" id="werkzeuge">
+  <div class="stage">
+    <div class="safe">
+      <p class="overline">Werkzeuge</p>
+      <h2 class="slide-title" style="margin-top:var(--space-3)">Claude Code + ein Ordner pro Kunde</h2>
+      <div style="margin-top:var(--space-10);display:grid;grid-template-columns:1fr 1fr;gap:var(--space-12)">
+        <div>
+          <h3 class="subhead" style="color:var(--fmnts-primary)">Das Tool: Claude Code</h3>
+          <ul class="bullets" style="margin-top:var(--space-5)">
+            <li>Liest euer Material selbst — PDFs, Fotos, Logos.</li>
+            <li>Baut und prüft HTML direkt am Rechner.</li>
+            <li>Merkt sich Kundenregeln über CLAUDE.md.</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="subhead" style="color:var(--fmnts-primary)">Der Ordner: Pitchdecks/&lt;kunde&gt;/</h3>
+          <ul class="bullets" style="margin-top:var(--space-5)">
+            <li>ressourcen/ — Logo, CI-Guide, Fotos, Texte, Zahlen.</li>
+            <li>CLAUDE.md — die Brand-Regeln des Kunden.</li>
+            <li>decks/ — alle Versionen, nichts überschreiben.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="body muted" style="position:absolute;bottom:88px;left:0">Vorlage liegt bereit: <strong>_kit/kunden-template/</strong> kopieren, umbenennen, fertig.</p>
+    </div>
+    <div class="footer">
+      <img src="img/logo-type-blue.png" alt="FORMUNAUTS">
+      <span class="page">06&nbsp;/&nbsp;21</span>
+    </div>
+  </div>
+  <a class="advance" href="#material" aria-label="Weiter">Weiter</a>
+</section>
+
+<!-- 07 · MATERIAL -->
+<section class="frame" id="material">
+  <div class="stage">
+    <div class="safe">
+      <p class="overline">Setup</p>
+      <h2 class="slide-title" style="margin-top:var(--space-3)">Ohne Material kein Deck</h2>
+      <ul class="bullets" style="margin-top:var(--space-16)">
+        <li>Logo als Originaldatei — kein Screenshot.</li>
+        <li>CI-Guide oder Brand-Manual als PDF.</li>
+        <li>8–15 starke, emotionale Fotos.</li>
+        <li>Mission, Stories und Kampagnentexte.</li>
+        <li>Zahlen mit Quellen — nie geschätzt.</li>
+      </ul>
+      <p class="body muted" style="position:absolute;bottom:88px;left:0">15 Minuten sammeln spart 2 Stunden iterieren.</p>
+    </div>
+    <div class="footer">
+      <img src="img/logo-type-blue.png" alt="FORMUNAUTS">
+      <span class="page">07&nbsp;/&nbsp;21</span>
+    </div>
+  </div>
+  <a class="advance" href="#regeln" aria-label="Weiter">Weiter</a>
+</section>
+
+<!-- 08 · DIE DREI REGELN -->
+<section class="frame" id="regeln">
+  <div class="stage" data-bg="canvas">
+    <div class="safe">
+      <p class="overline">Nicht verhandelbar</p>
+      <h2 class="slide-title" style="margin-top:var(--space-3)">Die drei Regeln</h2>
+      <div style="margin-top:var(--space-10);display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-8);align-items:stretch">
+        <div class="card">
+          <span class="num" style="font-size:var(--display-md-size);line-height:var(--display-md-lh);color:var(--fmnts-primary)">1</span>
+          <h3 class="subhead" style="margin-top:var(--space-4);font-size:var(--h4-size);line-height:var(--h4-lh)">Nur HTML + CSS</h3>
+          <p class="body muted" style="margin-top:var(--space-3);font-size:var(--body-md-size);line-height:var(--body-md-lh)">Niemals JavaScript. Läuft auf jedem Tablet — offline, ohne Setup.</p>
+        </div>
+        <div class="card">
+          <span class="num" style="font-size:var(--display-md-size);line-height:var(--display-md-lh);color:var(--fmnts-primary)">2</span>
+          <h3 class="subhead" style="margin-top:var(--space-4);font-size:var(--h4-size);line-height:var(--h4-lh)">Base64 erst am Schluss</h3>
+          <p class="body muted" style="margin-top:var(--space-3);font-size:var(--body-md-size);line-height:var(--body-md-lh)">Entwickeln mit normalen Bildpfaden. Verpackt wird ganz am Ende — in eine Datei.</p>
+        </div>
+        <div class="card">
+          <span class="num" style="font-size:var(--display-md-size);line-height:var(--display-md-lh);color:var(--fmnts-primary)">3</span>
+          <h3 class="subhead" style="margin-top:var(--space-4);font-size:var(--h4-size);line-height:var(--h4-lh)">CI ist heilig</h3>
+          <p class="body muted" style="margin-top:var(--space-3);font-size:var(--body-md-size);line-height:var(--body-md-lh)">Farben, Fonts, Logo exakt wie im Brand-Guide. Nichts erfinden — fragen.</p>
+        </div>
+      </div>
+      <p class="body muted" style="margin-top:var(--space-12)">Die Regeln stehen im Kunden-Template (CLAUDE.md) — Claude Code hält sie automatisch ein.</p>
+    </div>
+    <div class="footer">
+      <img src="img/logo-type-blue.png" alt="FORMUNAUTS">
+      <span class="page">08&nbsp;/&nbsp;21</span>
+    </div>
+  </div>
+  <a class="advance" href="#d2" aria-label="Weiter">Weiter</a>
+</section>
+
+<!-- 09 · DIVIDER 02 -->
+<section class="frame" id="d2">
+  <div class="stage" data-chrome="dark">
+    <span class="rings tr" aria-hidden="true"></span>
+    <div class="safe" style="justify-content:center">
+      <span class="num" style="font-size:var(--display-2xl-size);line-height:var(--display-2xl-lh);color:var(--fmnts-primary-75);opacity:.9">02</span>
+      <h2 class="display" style="font-size:var(--h1-size);line-height:var(--h1-lh);margin-top:var(--space-4)">Der Workflow</h2>
+      <p class="body muted" style="margin-top:var(--space-4);max-width:640px">Fünf Schritte. Ein fertiges Deck.</p>
+    </div>
+  </div>
+  <a class="advance" href="#workflow" aria-label="Weiter">Weiter</a>
+</section>
+
+<!-- 10 · WORKFLOW-TIMELINE -->
+<section class="frame" id="workflow">
+  <div class="stage">
+    <div class="safe">
+      <p class="overline">Der Workflow</p>
+      <h2 class="slide-title" style="margin-top:var(--space-3)">Vom Material zur Datei</h2>
+      <div style="position:absolute;left:0;right:0;top:300px">
+        <div style="position:absolute;left:0;width:calc(80% + 8px);top:0;height:2px;background:var(--fmnts-primary)"></div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr)">
+          <div style="position:relative;padding-right:var(--space-6)">
+            <div style="position:absolute;left:0;top:-7px;width:16px;height:16px;border-radius:var(--radius-pill);background:var(--fmnts-primary)"></div>
+            <div style="margin-top:var(--space-8)">
+              <p class="overline">Schritt 1</p>
+              <p class="num" style="font-size:var(--h3-size);color:var(--fmnts-primary);margin-top:var(--space-1)">Material</p>
+              <p class="body muted" style="font-size:var(--body-sm-size);line-height:var(--body-sm-lh);margin-top:var(--space-2)">Alles in ressourcen/.</p>
+            </div>
+          </div>
+          <div style="position:relative;padding-right:var(--space-6)">
+            <div style="position:absolute;left:0;top:-7px;width:16px;height:16px;border-radius:var(--radius-pill);background:var(--fmnts-primary)"></div>
+            <div style="margin-top:var(--space-8)">
+              <p class="overline">Schritt 2</p>
+              <p class="num" style="font-size:var(--h3-size);color:var(--fmnts-primary);margin-top:var(--space-1)">Brand-Analyse</p>
+              <p class="body muted" style="font-size:var(--body-sm-size);line-height:var(--body-sm-lh);margin-top:var(--space-2)">Claude erstellt BRAND.md.</p>
+            </div>
+          </div>
+          <div style="position:relative;padding-right:var(--space-6)">
+            <div style="position:absolute;left:0;top:-7px;width:16px;height:16px;border-radius:var(--radius-pill);background:var(--fmnts-primary)"></div>
+            <div style="margin-top:var(--space-8)">
+              <p class="overline">Schritt 3</p>
+              <p class="num" style="font-size:var(--h3-size);color:var(--fmnts-primary);margin-top:var(--space-1)">Konzept</p>
+              <p class="body muted" style="font-size:var(--body-sm-size);line-height:var(--body-sm-lh);margin-top:var(--space-2)">Slide-Plan — noch kein Code.</p>
+            </div>
+          </div>
+          <div style="position:relative;padding-right:var(--space-6)">
+            <div style="position:absolute;left:0;top:-7px;width:16px;height:16px;border-radius:var(--radius-pill);background:var(--fmnts-primary)"></div>
+            <div style="margin-top:var(--space-8)">
+              <p class="overline">Schritt 4</p>
+              <p class="num" style="font-size:var(--h3-size);color:var(--fmnts-primary);margin-top:var(--space-1)">Build</p>
+              <p class="body muted" style="font-size:var(--body-sm-size);line-height:var(--body-sm-lh);margin-top:var(--space-2)">Das Deck entsteht.</p>
+            </div>
+          </div>
+          <div style="position:relative">
+            <div style="position:absolute;left:0;top:-7px;width:16px;height:16px;border-radius:var(--radius-pill);background:var(--fmnts-primary)"></div>
+            <div style="margin-top:var(--space-8)">
+              <p class="overline">Schritt 5</p>
+              <p class="num" style="font-size:var(--h3-size);color:var(--fmnts-primary);margin-top:var(--space-1)">Testen &amp; Verpacken</p>
+              <p class="body muted" style="font-size:var(--body-sm-size);line-height:var(--body-sm-lh);margin-top:var(--space-2)">Iterieren, dann eine Datei.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="body muted" style="position:absolute;bottom:96px;left:0">Für jeden Schritt liegt ein fertiger Prompt in der Library.</p>
+    </div>
+    <div class="footer">
+      <img src="img/logo-type-blue.png" alt="FORMUNAUTS">
+      <span class="page">10&nbsp;/&nbsp;21</span>
+    </div>
+  </div>
+  <a class="advance" href="#brand" aria-label="Weiter">Weiter</a>
+</section>
+
+<!-- 11 · BRAND-ANALYSE -->
+<section class="frame" id="brand">
+  <div class="stage">
+    <div class="safe">
+      <p class="overline">Schritt 2 · Brand-Analyse</p>
+      <h2 class="slide-title" style="margin-top:var(--space-3)">Erst analysieren, dann bauen</h2>
+      <ul class="bullets" style="margin-top:var(--space-8)">
+        <li>Claude liest ressourcen/ komplett — vor der ersten Zeile Code.</li>
+        <li>Ergebnis: BRAND.md — das Designsystem des Kunden.</li>
+        <li>Exakte Hex-Farben aus dem CI-Guide. Nichts erfinden.</li>
+        <li>Fehlt etwas, fragt Claude — ihr entscheidet.</li>
+        <li>Einmal erstellt, für jedes weitere Deck wiederverwendet.</li>
+      </ul>
+      <div style="position:absolute;bottom:88px;left:0;right:0;display:flex;align-items:center;gap:var(--space-8)">
+        <p class="overline" style="flex:0 0 auto">Ein Workflow — jede Brand</p>
+        <div style="display:flex;align-items:center;gap:var(--space-8);opacity:.85">
+          <img src="img/wwf.png" alt="WWF" style="height:44px;width:auto">
+          <img src="img/amnesty.png" alt="Amnesty International" style="height:48px;width:auto">
+          <img src="img/amref.png" alt="Amref Health Africa" style="height:38px;width:auto">
+          <img src="img/drk.png" alt="Deutsches Rotes Kreuz" style="height:34px;width:auto">
+          <img src="img/unicef.png" alt="UNICEF" style="height:26px;width:auto">
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <img src="img/logo-type-blue.png" alt="FORMUNAUTS">
+      <span class="page">11&nbsp;/&nbsp;21</span>
+    </div>
+  </div>
+  <a class="advance" href="#kurve" aria-label="Weiter">Weiter</a>
+</section>
+
+<!-- 12 · KONZEPT / SPANNUNGSKURVE -->
+<section class="frame" id="kurve">
+  <div class="stage" data-bg="canvas">
+    <div class="safe">
+      <p class="overline">Schritt 3 · Konzept</p>
+      <h2 class="slide-title" style="margin-top:var(--space-3)">Die Spannungskurve</h2>
+      <div style="margin-top:var(--space-12);display:grid;grid-template-columns:repeat(5,1fr);gap:var(--space-6);align-items:end">
+        <div>
+          <div style="height:48px;border-radius:var(--radius-xs);background:var(--fmnts-primary-25)"></div>
+          <p class="num" style="font-size:var(--h4-size);color:var(--fmnts-primary);margin-top:var(--space-4)">Hook</p>
+          <p class="body muted" style="font-size:var(--body-sm-size);line-height:var(--body-sm-lh);margin-top:var(--space-1)">Stoppt die Person.</p>
+        </div>
+        <div>
+          <div style="height:96px;border-radius:var(--radius-xs);background:var(--fmnts-primary-50)"></div>
+          <p class="num" style="font-size:var(--h4-size);color:var(--fmnts-primary);margin-top:var(--space-4)">Problem</p>
+          <p class="body muted" style="font-size:var(--body-sm-size);line-height:var(--body-sm-lh);margin-top:var(--space-1)">Konkret. Ein Kind, ein Ort.</p>
+        </div>
+        <div>
+          <div style="height:144px;border-radius:var(--radius-xs);background:var(--fmnts-primary-75)"></div>
+          <p class="num" style="font-size:var(--h4-size);color:var(--fmnts-primary);margin-top:var(--space-4)">Hoffnung</p>
+          <p class="body muted" style="font-size:var(--body-sm-size);line-height:var(--body-sm-lh);margin-top:var(--space-1)">Die Organisation als Held:in.</p>
+        </div>
+        <div>
+          <div style="height:192px;border-radius:var(--radius-xs);background:var(--fmnts-primary)"></div>
+          <p class="num" style="font-size:var(--h4-size);color:var(--fmnts-primary);margin-top:var(--space-4)">Impact</p>
+          <p class="body muted" style="font-size:var(--body-sm-size);line-height:var(--body-sm-lh);margin-top:var(--space-1)">Was 15&#8239;€ im Monat bewirken.</p>
+        </div>
+        <div>
+          <div style="height:240px;border-radius:var(--radius-xs);background:var(--fmnts-primary-dark)"></div>
+          <p class="num" style="font-size:var(--h4-size);color:var(--fmnts-primary-dark);margin-top:var(--space-4)">Ask</p>
+          <p class="body muted" style="font-size:var(--body-sm-size);line-height:var(--body-sm-lh);margin-top:var(--space-1)">Der Höhepunkt. Eine echte Frage.</p>
+        </div>
+      </div>
+      <p class="body" style="margin-top:var(--space-10)"><strong>Konzept lesen und freigeben — erst dann wird gebaut.</strong></p>
+    </div>
+    <div class="footer">
+      <img src="img/logo-type-blue.png" alt="FORMUNAUTS">
+      <span class="page">12&nbsp;/&nbsp;21</span>
+    </div>
+  </div>
+  <a class="advance" href="#build" aria-label="Weiter">Weiter</a>
+</section>
+
+<!-- 13 · BUILD -->
+<section class="frame" id="build">
+  <div class="stage">
+    <div class="safe">
+      <p class="overline">Schritt 4 · Build</p>
+      <h2 class="slide-title" style="margin-top:var(--space-3)">Ein Prompt. Ein Deck.</h2>
+      <ul class="bullets" style="margin-top:var(--space-16)">
+        <li>Prompt 03 enthält alle technischen Regeln — nichts weglassen.</li>
+        <li>Scroll-Snap: Jeder Wisch genau eine Slide.</li>
+        <li>Tap auf den Hintergrund blättert. Zeigen blättert nicht.</li>
+        <li>Gradient hinter Text: lesbar auch bei Sonnenlicht.</li>
+        <li>Diese Präsentation ist genau so gebaut — ohne JavaScript.</li>
+      </ul>
+    </div>
+    <div class="footer">
+      <img src="img/logo-type-blue.png" alt="FORMUNAUTS">
+      <span class="page">13&nbsp;/&nbsp;21</span>
+    </div>
+  </div>
+  <a class="advance" href="#iterieren" aria-label="Weiter">Weiter</a>
+</section>
+
+<!-- 14 · ITERIEREN -->
+<section class="frame" id="iterieren">
+  <div class="stage">
+    <div class="safe">
+      <p class="overline">Schritt 5 · Iterieren</p>
+      <h2 class="slide-title" style="margin-top:var(--space-3)">Feedback, das Claude versteht</h2>
+      <ul class="bullets" style="margin-top:var(--space-16)">
+        <li>Ein Problem pro Prompt — nicht fünf auf einmal.</li>
+        <li>Screenshot einfügen: „Hier — das ist das Problem.“</li>
+        <li>Vor großen Änderungen eine Backup-Kopie.</li>
+        <li>Auf echtem iPad testen — Portrait und Landscape.</li>
+        <li>Jede Zahl gegen die Quellen prüfen.</li>
+      </ul>
+    </div>
+    <div class="footer">
+      <img src="img/logo-type-blue.png" alt="FORMUNAUTS">
+      <span class="page">14&nbsp;/&nbsp;21</span>
+    </div>
+  </div>
+  <a class="advance" href="#verpacken" aria-label="Weiter">Weiter</a>
+</section>
+
+<!-- 15 · VERPACKEN -->
+<section class="frame" id="verpacken">
+  <div class="stage" data-bg="canvas">
+    <div class="safe">
+      <p class="overline">Schritt 5 · Verpacken</p>
+      <h2 class="slide-title" style="margin-top:var(--space-3)">Eine Datei, die überall läuft</h2>
+      <div style="margin-top:var(--space-12);display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-12)">
+        <div>
+          <div class="num" style="font-size:var(--display-xl-size);line-height:var(--display-xl-lh);color:var(--fmnts-primary)">1</div>
+          <p class="overline" style="margin-top:var(--space-4)">HTML-Datei — alles eingebettet</p>
+        </div>
+        <div>
+          <div class="num" style="font-size:var(--display-xl-size);line-height:var(--display-xl-lh);color:var(--fmnts-primary)">0</div>
+          <p class="overline" style="margin-top:var(--space-4)">Externe Abhängigkeiten</p>
+        </div>
+        <div>
+          <div class="num" style="font-size:var(--display-xl-size);line-height:var(--display-xl-lh);color:var(--fmnts-primary)">100&#8239;%</div>
+          <p class="overline" style="margin-top:var(--space-4)">Offline einsatzbereit</p>
+        </div>
+      </div>
+      <p class="body muted" style="margin-top:var(--space-12)">Der finale Test: Flugmodus an, Datei öffnen. Alles da? Ship it.</p>
+    </div>
+    <div class="footer">
+      <img src="img/logo-type-blue.png" alt="FORMUNAUTS">
+      <span class="page">15&nbsp;/&nbsp;21</span>
+    </div>
+  </div>
+  <a class="advance" href="#d3" aria-label="Weiter">Weiter</a>
+</section>
+
+<!-- 16 · DIVIDER 03 -->
+<section class="frame" id="d3">
+  <div class="stage" data-chrome="dark">
+    <span class="rings tr" aria-hidden="true"></span>
+    <div class="safe" style="justify-content:center">
+      <span class="num" style="font-size:var(--display-2xl-size);line-height:var(--display-2xl-lh);color:var(--fmnts-primary-75);opacity:.9">03</span>
+      <h2 class="display" style="font-size:var(--h1-size);line-height:var(--h1-lh);margin-top:var(--space-4)">Die Prompt-Library</h2>
+      <p class="body muted" style="margin-top:var(--space-4);max-width:640px">Ein fertiger Prompt für jeden Schritt.</p>
+    </div>
+  </div>
+  <a class="advance" href="#library" aria-label="Weiter">Weiter</a>
+</section>
+
+<!-- 17 · PROMPT-LIBRARY -->
+<section class="frame" id="library">
+  <div class="stage">
+    <div class="safe">
+      <p class="overline">Die Prompt-Library</p>
+      <h2 class="slide-title" style="margin-top:var(--space-3)">Kopieren, einfügen, anpassen</h2>
+      <div style="margin-top:var(--space-8);display:flex;flex-direction:column;gap:var(--space-4)">
+        <div class="agrow"><span class="n" style="font-size:var(--h3-size)">00</span><span class="t" style="font-size:var(--h5-size)">Setup &amp; Material</span><span class="body muted" style="font-size:var(--body-md-size)">Tool installieren, Kundenordner anlegen.</span></div>
+        <div class="agrow"><span class="n" style="font-size:var(--h3-size)">01</span><span class="t" style="font-size:var(--h5-size)">Brand-Analyse</span><span class="body muted" style="font-size:var(--body-md-size)">BRAND.md — das Designsystem des Kunden.</span></div>
+        <div class="agrow"><span class="n" style="font-size:var(--h3-size)">02</span><span class="t" style="font-size:var(--h5-size)">Konzept</span><span class="body muted" style="font-size:var(--body-md-size)">Slide-Plan mit Spannungskurve — zum Freigeben.</span></div>
+        <div class="agrow"><span class="n" style="font-size:var(--h3-size)">03</span><span class="t" style="font-size:var(--h5-size)">Build</span><span class="body muted" style="font-size:var(--body-md-size)">Das Deck — alle Tech-Regeln eingebaut.</span></div>
+        <div class="agrow"><span class="n" style="font-size:var(--h3-size)">04</span><span class="t" style="font-size:var(--h5-size)">Iteration</span><span class="body muted" style="font-size:var(--body-md-size)">Fertige Feedback-Prompts für jede Lage.</span></div>
+        <div class="agrow"><span class="n" style="font-size:var(--h3-size)">05</span><span class="t" style="font-size:var(--h5-size)">Verpacken &amp; Checkliste</span><span class="body muted" style="font-size:var(--body-md-size)">Base64, Offline-Test, Go-Live.</span></div>
+      </div>
+      <p class="body muted" style="margin-top:var(--space-8)">Plus 06 Troubleshooting. Alles in <strong>support-cc/Pitchdecks/_kit/prompt-library/</strong></p>
+    </div>
+    <div class="footer">
+      <img src="img/logo-type-blue.png" alt="FORMUNAUTS">
+      <span class="page">17&nbsp;/&nbsp;21</span>
+    </div>
+  </div>
+  <a class="advance" href="#mockup" aria-label="Weiter">Weiter</a>
+</section>
+
+<!-- 18 · MOCKUP -->
+<section class="frame" id="mockup">
+  <div class="stage" data-bg="canvas">
+    <div class="safe">
+      <p class="overline">So sieht das aus</p>
+      <h2 class="slide-title" style="margin-top:var(--space-3)">Prompt rein. Deck raus.</h2>
+      <div style="margin-top:var(--space-8);max-width:880px;border-radius:var(--radius-lg);box-shadow:var(--elevation-4);overflow:hidden">
+        <div style="background:var(--neutral-900);padding:var(--space-3) var(--space-5);display:flex;align-items:center;gap:var(--space-2)">
+          <span style="width:12px;height:12px;border-radius:var(--radius-pill);background:var(--neutral-600)"></span>
+          <span style="width:12px;height:12px;border-radius:var(--radius-pill);background:var(--neutral-600)"></span>
+          <span style="width:12px;height:12px;border-radius:var(--radius-pill);background:var(--neutral-600)"></span>
+          <span style="margin-left:var(--space-3);color:var(--blue-100);font-size:var(--body-sm-size)">Claude Code — Pitchdecks/uebung</span>
+        </div>
+        <div style="background:var(--bg-surface);padding:var(--space-6);font-family:var(--font-mono);font-size:var(--body-sm-size);line-height:var(--body-md-lh)">
+          <p style="color:var(--neutral-700)">// Prompt 03 aus der Library eingefügt, Enter gedrückt:</p>
+          <p style="margin-top:var(--space-2)">Du bist Elite-Street-Pitch-Designer:in. Baue jetzt das Deck aus KONZEPT.md, mit den Brand-Regeln aus BRAND.md. Das CI ist heilig …</p>
+          <p style="margin-top:var(--space-4);color:var(--fmnts-primary)">→ Lese KONZEPT.md und BRAND.md</p>
+          <p style="color:var(--fmnts-primary)">→ Baue decks/deck_v1.html — 11 Slides, Scroll-Snap, kein JavaScript</p>
+          <p style="color:var(--fmnts-primary)">→ Fertig. Öffne die Datei im Browser und gib mir Feedback.</p>
+        </div>
+      </div>
+      <p class="body muted" style="position:absolute;bottom:88px;left:0">Ein Prompt pro Schritt. Kopieren, einfügen, Enter — mehr ist es nicht.</p>
+    </div>
+    <div class="footer">
+      <img src="img/logo-type-blue.png" alt="FORMUNAUTS">
+      <span class="page">18&nbsp;/&nbsp;21</span>
+    </div>
+  </div>
+  <a class="advance" href="#d4" aria-label="Weiter">Weiter</a>
+</section>
+
+<!-- 19 · DIVIDER 04 -->
+<section class="frame" id="d4">
+  <div class="stage" data-chrome="dark">
+    <span class="rings tr" aria-hidden="true"></span>
+    <div class="safe" style="justify-content:center">
+      <span class="num" style="font-size:var(--display-2xl-size);line-height:var(--display-2xl-lh);color:var(--fmnts-primary-75);opacity:.9">04</span>
+      <h2 class="display" style="font-size:var(--h1-size);line-height:var(--h1-lh);margin-top:var(--space-4)">Die Übung</h2>
+      <p class="body muted" style="margin-top:var(--space-4);max-width:640px">Jetzt ihr. Das Material liegt bereit.</p>
+    </div>
+  </div>
+  <a class="advance" href="#uebung" aria-label="Weiter">Weiter</a>
+</section>
+
+<!-- 20 · ÜBUNG -->
+<section class="frame" id="uebung">
+  <div class="stage">
+    <div class="safe">
+      <p class="overline">Übung · 30 Minuten</p>
+      <h2 class="slide-title" style="margin-top:var(--space-3)">Jetzt ihr: Amref Health Africa</h2>
+      <ul class="bullets" style="margin-top:var(--space-16)">
+        <li>_kit/uebung/ in Claude Code öffnen — Logo, Brandbook, Fotos, Zahlen liegen bereit.</li>
+        <li>Prompt 01 einfügen: Die Brand-Analyse läuft live.</li>
+        <li>BRAND.md gemeinsam lesen — stimmen Farben und Zahlen?</li>
+        <li>Prompt 02: Konzept erzeugen, den Ask laut diskutieren.</li>
+        <li>Danach: Build starten — iterieren und verpacken kommt zu Hause.</li>
+      </ul>
+      <p class="body muted" style="position:absolute;bottom:88px;left:0">Zum Vergleichen: <strong>_kit/beispiel/</strong> — das fertige Amref-Deck.</p>
+    </div>
+    <div class="footer">
+      <img src="img/logo-type-blue.png" alt="FORMUNAUTS">
+      <span class="page">20&nbsp;/&nbsp;21</span>
+    </div>
+  </div>
+  <a class="advance" href="#ende" aria-label="Weiter">Weiter</a>
+</section>
+
+<!-- 21 · CLOSING -->
+<section class="frame" id="ende">
+  <div class="stage" data-chrome="dark">
+    <span class="rings" aria-hidden="true"></span>
+    <div class="safe" style="justify-content:flex-end">
+      <img src="img/logo-claim-3l-white.png" alt="FORMUNAUTS — The new standard for face-to-face" style="position:absolute;top:0;left:0;width:300px;height:auto">
+      <p class="overline" style="margin-bottom:var(--space-4)">Nächster Schritt</p>
+      <h2 class="display" style="font-size:var(--display-lg-size);line-height:var(--display-lg-lh);max-width:980px">Kopiert das Template.<br>Baut euer erstes Deck.</h2>
+      <p class="body" style="margin-top:var(--space-6)">_kit/kunden-template/&nbsp;&nbsp;·&nbsp;&nbsp;formunauts.com</p>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

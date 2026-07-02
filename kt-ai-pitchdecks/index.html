@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Pitchdecks · Knowledge Transfer CC · FORMUNAUTS</title>
+<link rel="stylesheet" href="deck/_base.css">
+<style>
+  body{
+    background: var(--bg-base);
+    color: var(--fg-default);
+    font-family: var(--font-body);
+    margin: 0;
+  }
+  .wrap{ max-width: 1080px; margin: 0 auto; padding: var(--space-16) var(--space-8) var(--space-24); }
+  .hero{
+    position: relative; overflow: hidden;
+    background: var(--neutral-900); color: var(--fg-inverse);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-16);
+  }
+  .rings{ position: absolute; pointer-events: none; right: -160px; top: -160px; width: 520px; height: 520px; }
+  .rings::before, .rings::after{
+    content: ""; position: absolute; inset: 0;
+    border-radius: var(--radius-pill); border: 1.5px solid var(--fmnts-primary-75); opacity: .32;
+  }
+  .rings::after{ inset: 92px; }
+  .overline{
+    font-weight: 600; font-size: var(--overline-size); line-height: var(--overline-lh);
+    letter-spacing: var(--overline-tracking); text-transform: uppercase;
+    color: var(--blue-100); margin: 0;
+  }
+  .light .overline{ color: var(--fmnts-primary); }
+  h1{
+    font-family: var(--font-display); font-weight: 600; letter-spacing: -0.005em;
+    font-size: var(--display-md-size); line-height: var(--display-md-lh);
+    margin: var(--space-4) 0 0;
+  }
+  h2{
+    font-weight: 600; font-size: var(--h2-size); line-height: var(--h2-lh);
+    letter-spacing: -0.01em; margin: 0;
+  }
+  .sub{ font-size: var(--body-lg-size); line-height: var(--body-lg-lh); color: var(--blue-100); margin: var(--space-5) 0 0; max-width: 620px; }
+  .actions{ display: flex; flex-wrap: wrap; gap: var(--space-4); margin-top: var(--space-10); }
+  .btn{
+    display: inline-block; text-decoration: none;
+    font-weight: 600; font-size: var(--body-md-size); line-height: var(--body-md-lh);
+    padding: var(--space-3) var(--space-6);
+    border-radius: var(--radius-pill);
+    background: var(--fmnts-primary); color: var(--fg-on-primary);
+  }
+  .btn:hover{ background: var(--fmnts-primary-dark); }
+  .btn.ghost{ background: transparent; color: var(--fg-inverse); border: 1px solid var(--fmnts-primary-75); }
+  .btn.ghost:hover{ border-color: var(--fg-inverse); }
+  section.light{ margin-top: var(--space-20); }
+  .grid{ display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); margin-top: var(--space-8); }
+  @media (max-width: 860px){ .grid{ grid-template-columns: 1fr; } }
+  .card{
+    background: var(--bg-surface); border-radius: var(--radius-lg);
+    box-shadow: var(--elevation-2); padding: var(--space-6);
+  }
+  .step{ display: flex; gap: var(--space-5); padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
+  .step:last-child{ border-bottom: none; }
+  .step .t{
+    font-family: var(--font-display); font-feature-settings: "tnum" 1;
+    color: var(--fmnts-primary); font-weight: 600;
+    font-size: var(--body-md-size); line-height: var(--body-md-lh);
+    width: 96px; flex: 0 0 auto;
+  }
+  .step .w{ font-size: var(--body-md-size); line-height: var(--body-md-lh); }
+  .step .w strong{ font-weight: 600; }
+  .step .w .muted{ color: var(--fg-muted); }
+  table{ width: 100%; border-collapse: collapse; margin-top: var(--space-6); }
+  th{
+    text-align: left; font-size: var(--overline-size); letter-spacing: var(--overline-tracking);
+    text-transform: uppercase; color: var(--fg-muted); font-weight: 600;
+    padding: 0 var(--space-4) var(--space-3) 0;
+  }
+  td{
+    padding: var(--space-3) var(--space-4) var(--space-3) 0;
+    border-top: 1px solid var(--border-subtle);
+    font-size: var(--body-md-size); line-height: var(--body-md-lh);
+    vertical-align: top;
+  }
+  td.file{ font-family: var(--font-mono); font-size: var(--body-sm-size); white-space: nowrap; color: var(--fmnts-primary-dark); }
+  .note{
+    margin-top: var(--space-8); padding: var(--space-5) var(--space-6);
+    background: var(--blue-100); border-radius: var(--radius-lg);
+    font-size: var(--body-md-size); line-height: var(--body-md-lh);
+  }
+  footer{ margin-top: var(--space-20); color: var(--fg-muted); font-size: var(--body-sm-size); line-height: var(--body-sm-lh); }
+  footer img{ height: 16px; width: auto; display: block; margin-bottom: var(--space-3); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <span class="rings" aria-hidden="true"></span>
+    <p class="overline">Knowledge Transfer · Customer Care · Juli 2026</p>
+    <h1>AI Pitchdecks.</h1>
+    <p class="sub">Von der Brand-Analyse zum fertigen Street-Pitch — mit Claude Code. Alles für die Session an einem Ort.</p>
+    <div class="actions">
+      <a class="btn" href="deck/AI-Pitchdeck-Guide.html">Präsentation starten</a>
+      <a class="btn ghost" href="beispiel/amref_mission_2026_final.html">Beispiel-Deck: Amref Mission 2026</a>
+      <a class="btn ghost" href="deck/AI-Pitchdeck-Guide.pdf">PDF-Version</a>
+    </div>
+  </header>
+
+  <section class="light">
+    <p class="overline">Ablauf</p>
+    <h2>60 Minuten — Schritt für Schritt</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="step"><span class="t">00–05</span><span class="w"><strong>Warum</strong> · Slides 1–2<br><span class="muted">Kontext, Ziel, Meta-Punkt: „Diese Präse ist selbst so gebaut."</span></span></div>
+        <div class="step"><span class="t">05–10</span><span class="w"><strong>Wow-Moment</strong> · Slide 3 + Beispiel-Deck live durchtappen<br><span class="muted">„Von Claude gebaut. Am Tablet. Offline."</span></span></div>
+        <div class="step"><span class="t">10–16</span><span class="w"><strong>Werkzeuge &amp; Regeln</strong> · Slides 5–8<br><span class="muted">Claude Code zeigen, Kundenordner, die 3 Regeln.</span></span></div>
+        <div class="step"><span class="t">16–24</span><span class="w"><strong>Der Workflow</strong> · Slides 9–15<br><span class="muted">5 Schritte. Betonen: Konzept-Freigabe = wichtigster Quality-Gate.</span></span></div>
+      </div>
+      <div class="card">
+        <div class="step"><span class="t">24–28</span><span class="w"><strong>Prompt-Library</strong> · Slides 16–18<br><span class="muted">Finder öffnen, Prompt 01 zeigen: Kopieren, einfügen, Enter.</span></span></div>
+        <div class="step"><span class="t">28–55</span><span class="w"><strong>Die Übung</strong> · Slides 19–20<br><span class="muted">uebung/ in Claude Code: Prompt 01 live → BRAND.md lesen → Prompt 02 → Konzept diskutieren → Prompt 03 starten.</span></span></div>
+        <div class="step"><span class="t">55–60</span><span class="w"><strong>Abschluss</strong> · Slide 21<br><span class="muted">Hausaufgabe: iterieren + verpacken, Ergebnis in Slack.</span></span></div>
+      </div>
+    </div>
+    <div class="note">Vorbereitung: Präse im Vollbild · Claude Code im Ordner <strong>_kit/uebung/</strong> · Beispiel-Deck im zweiten Tab · Prompts 01 + 02 im Texteditor bereit. Details: <strong>_kit/SESSION-PLAN.md</strong></div>
+  </section>
+
+  <section class="light">
+    <p class="overline">Das Kit</p>
+    <h2>Was in den Dateien steckt</h2>
+    <table>
+      <tr><th>Datei / Ordner</th><th>Inhalt</th></tr>
+      <tr><td class="file">README.md</td><td>Einstieg: Was ist das Kit, Schnellstart neuer Kunde in 5 Minuten, die drei Regeln.</td></tr>
+      <tr><td class="file">SESSION-PLAN.md</td><td>Dieser 60-Minuten-Ablauf als Stichwort-Spickzettel, inkl. Vorbereitungs-Checkliste.</td></tr>
+      <tr><td class="file">prompt-library/00-setup.md</td><td>Claude Code installieren, Kundenordner anlegen, Material-Checkliste (Logo, CI, Fotos, Zahlen mit Quellen).</td></tr>
+      <tr><td class="file">prompt-library/01-brand-analyse.md</td><td>Prompt: ressourcen/ komplett analysieren → BRAND.md, das Designsystem des Kunden. Einmal pro Kunde, danach wiederverwendet.</td></tr>
+      <tr><td class="file">prompt-library/02-konzept.md</td><td>Prompt: Slide-Plan mit Spannungskurve (Hook → Problem → Hoffnung → Impact → Ask) → KONZEPT.md. Ein Mensch gibt frei, bevor gebaut wird.</td></tr>
+      <tr><td class="file">prompt-library/03-build.md</td><td>Prompt: das Deck bauen. Alle Tech-Regeln eingebaut — scroll-snap, Tap-to-advance, iOS-Fallback, Sonnenlicht-Kontrast, kein JavaScript.</td></tr>
+      <tr><td class="file">prompt-library/04-iteration.md</td><td>Fertige Feedback-Prompts: Hook schärfen, Text kürzen, CI-Check, Screenshot-Feedback, Responsive-Fix. Regel: ein Problem pro Prompt.</td></tr>
+      <tr><td class="file">prompt-library/05-verpacken.md</td><td>Prompt: Bilder + Fonts als Base64 in eine einzige Offline-Datei. Plus Go-Live-Checkliste (Gerätetest, Flugmodus, CI, Dateigröße).</td></tr>
+      <tr><td class="file">prompt-library/06-troubleshooting.md</td><td>Die 12 häufigsten Probleme mit fertigen Fix-Prompts — von „CI ignoriert" bis „iOS scrollt komisch".</td></tr>
+      <tr><td class="file">kunden-template/</td><td>Ordner-Vorlage pro Kunde: CLAUDE.md (Brand-Regeln), ressourcen/, decks/. Kopieren, umbenennen, loslegen.</td></tr>
+      <tr><td class="file">uebung/</td><td>Fertiger Amref-Übungsordner: Logo, Brandbook-PDF, 8 Fotos, Mission-Story mit Zahlen. Damit läuft die Live-Übung.</td></tr>
+      <tr><td class="file">beispiel/</td><td>Das fertige Amref-Mission-2026-Deck als Referenz — so sieht das Ziel aus.</td></tr>
+    </table>
+    <div class="note">Quelle &amp; Arbeitskopie fürs Team: <strong>support-cc/Pitchdecks/_kit/</strong> — diese Seite hier ist das Meeting-Paket im Demo-Tool.</div>
+  </section>
+
+  <footer>
+    <img src="deck/img/logo-type-blue.png" alt="FORMUNAUTS">
+    Knowledge Transfer · AI Pitchdecks · formunauts.com
+  </footer>
+
+</div>
+</body>
+</html>

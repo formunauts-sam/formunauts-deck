@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AMREF — Mission 2026 · Südsudan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Archivo+Black&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ---------- Design tokens ---------- */
+:root {
+  --red: #D21034;
+  --red-deep: #A50D29;
+  --red-soft: #F49F94;
+  --cream: #FAF5ED;
+  --paper: #F2EADA;
+  --ink: #0C0C0C;
+  --ash: #3A3A3A;
+  --gray: #8A8A8A;
+  --line: #1a1a1a;
+
+  --font-display: 'Archivo Black', 'Archivo', 'Franklin Gothic', sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, monospace;
+
+  --pad-x: clamp(32px, 5vw, 96px);
+  --pad-y: clamp(32px, 5vh, 72px);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+html { color-scheme: light; }
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--cream);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  scroll-snap-type: y mandatory;
+  overflow-y: scroll;
+  height: 100vh;
+  scroll-behavior: smooth;
+}
+img { max-width: 100%; display: block; }
+a { color: inherit; text-decoration: none; }
+
+/* Each slide takes a full viewport height and snaps on scroll */
+.slide {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: var(--pad-y) var(--pad-x);
+}
+
+/* ---------- Reusable vocabulary ---------- */
+.kicker {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--red);
+}
+.kicker.on-dark { color: #fff; opacity: .85; }
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 900;
+  line-height: 0.88;
+  letter-spacing: -0.015em;
+  text-transform: uppercase;
+}
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+.body-lg { font-size: clamp(16px, 1.25vw, 20px); line-height: 1.55; max-width: 56ch; color: var(--ash); }
+.body-lg.on-dark { color: rgba(255,255,255,.85); }
+
+.slide-meta {
+  position: absolute;
+  top: var(--pad-y);
+  right: var(--pad-x);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--ash);
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  z-index: 5;
+}
+.slide-meta.on-dark { color: rgba(255,255,255,.75); }
+.slide-meta .track { color: var(--red); }
+.slide-meta.on-dark .track { color: #fff; }
+
+/* Brand lockup — real AMREF logo in cream pill, works on any background */
+.brand-chip {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  background: #fff;
+  padding: 7px 12px 7px 12px;
+  border-radius: 3px;
+  box-shadow: 0 6px 20px -8px rgba(0,0,0,.25);
+  transition: transform .2s ease;
+}
+.brand-chip:hover { transform: translateY(-1px); }
+.brand-chip img {
+  height: 26px;
+  width: auto;
+  display: block;
+}
+
+/* kartelrand (serrated torn-paper) divider */
+.kartel {
+  position: absolute;
+  left: 0; right: 0;
+  height: 20px;
+  pointer-events: none;
+  z-index: 3;
+}
+.kartel.top { top: -1px; transform: rotate(180deg); }
+.kartel.bottom { bottom: -1px; }
+.kartel svg { width: 100%; height: 100%; display: block; }
+
+/* vertical dashed ticket perforation */
+.perf {
+  border-left: 2px dashed currentColor;
+  opacity: .35;
+  height: 100%;
+  align-self: stretch;
+}
+
+/* scroll-driven entry animations (no JS) */
+@supports (animation-timeline: view()) {
+  .reveal {
+    animation: rise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 60%;
+  }
+  .reveal-slow {
+    animation: rise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 85%;
+  }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Deck-wide fixed rail nav (right side dots) — glass pill, adaptive */
+.rail {
+  position: fixed;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 50;
+  padding: 10px 5px;
+  border-radius: 20px;
+  background: rgba(0,0,0,.28);
+  backdrop-filter: blur(8px) saturate(140%);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+}
+.rail a {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(255,255,255,.55);
+  transition: background .2s ease, transform .2s ease, width .2s ease, height .2s ease;
+}
+.rail a:hover {
+  background: #fff;
+  transform: scale(1.4);
+}
+
+/* Deck ticker — subtle bottom-left, "mission control" feel */
+.deck-ticker {
+  position: fixed;
+  bottom: 14px; left: 14px;
+  z-index: 40;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--red);
+  padding: 6px 10px;
+  border-radius: 2px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  box-shadow: 0 6px 20px -8px rgba(0,0,0,.35);
+}
+.deck-ticker .dot {
+  width: 5px; height: 5px; border-radius: 50%; background: #fff;
+  animation: blink 1.2s ease-in-out infinite;
+}
+
+/* Tap-anywhere-to-advance layer — covers each slide, invisible, CSS-only.
+   Sits ABOVE static content so any tap on non-interactive area advances to next slide.
+   High-z-index chrome (rail nav, brand chip, ticker) stays on top and stays interactive. */
+.advance {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: block;
+  text-indent: -9999px;
+  overflow: hidden;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Visible bouncing chevron hint at bottom-center */
+.advance::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  width: 16px;
+  height: 16px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateX(-50%) rotate(45deg);
+  opacity: .55;
+  animation: bob 1.8s cubic-bezier(.45,.05,.55,.95) infinite;
+  pointer-events: none;
+}
+.s1 .advance, .s3 .advance, .s4 .advance, .s6 .advance, .s7 .advance, .s10 .advance, .s11 .advance { color: rgba(255,255,255,.8); }
+.s2 .advance, .s5 .advance, .s8 .advance, .s9 .advance { color: rgba(12,12,12,.45); }
+
+@keyframes bob {
+  0%, 100% { transform: translateX(-50%) translateY(-4px) rotate(45deg); opacity: .45; }
+  50%      { transform: translateX(-50%) translateY(6px)  rotate(45deg); opacity: .9;  }
+}
+@keyframes blink { 0%, 100% { opacity: 1 } 50% { opacity: .25 } }
+
+/* ------------------------------------ */
+/* SLIDE 1 — GATE / Cover               */
+/* ------------------------------------ */
+.s1 {
+  background:
+    linear-gradient(180deg, rgba(15,0,0,.15) 0%, rgba(15,0,0,.45) 45%, rgba(15,0,0,.92) 100%),
+    url('deck_images/01_hook_amref_zelt_up.png') center 35%/cover no-repeat;
+  color: #fff;
+  justify-content: flex-end;
+}
+/* S1 no longer needs its own top-meta — global chrome handles brand; slide-meta handles track. */
+.s1 h1 {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(56px, 12vw, 180px);
+  line-height: 0.82;
+  letter-spacing: -0.02em;
+  margin: 0 0 18px;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 2px 24px rgba(0,0,0,.25);
+}
+.s1 h1 .line2 {
+  display: block;
+  color: var(--red-soft);
+}
+.s1 .tagline {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: clamp(18px, 1.6vw, 26px);
+  max-width: 28ch;
+  color: rgba(255,255,255,.92);
+  margin-bottom: 24px;
+}
+.s1 .departures {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+  border-top: 1px solid rgba(255,255,255,.25);
+  padding-top: 16px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.7);
+  max-width: 1100px;
+}
+.s1 .departures div { min-width: 0; }
+.s1 .departures div b { display: block; font-family: var(--font-display); font-weight: 900; color: #fff; font-size: clamp(14px, 1.1vw, 18px); letter-spacing: 0.02em; margin-bottom: 4px; line-height: 1.1; }
+.s1 .departures .status b { color: var(--red-soft); animation: blink 1.6s ease-in-out infinite; }
+
+/* ------------------------------------ */
+/* SLIDE 2 — HERITAGE 1957              */
+/* ------------------------------------ */
+.s2 {
+  background: var(--cream);
+  color: var(--ink);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+.s2 .heritage-text { padding-right: 20px; z-index: 2; }
+.s2 .huge-year {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(140px, 24vw, 340px);
+  color: var(--red);
+  line-height: 0.82;
+  letter-spacing: -0.04em;
+  margin: 16px 0 8px;
+}
+.s2 h2 {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(30px, 3.2vw, 56px);
+  line-height: 0.95;
+  margin: 0 0 18px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+.s2 .image-frame {
+  position: relative;
+  height: 80%;
+  align-self: center;
+  background: url('deck_images/02_heritage_flying_doctors_up.jpeg') center/cover;
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: 0 40px 80px -30px rgba(0,0,0,.25);
+}
+.s2 .image-frame::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent 40%, rgba(210,16,52,.15) 100%);
+}
+.s2 .image-frame .stamp {
+  position: absolute;
+  bottom: 20px; left: 20px;
+  background: var(--red);
+  color: #fff;
+  padding: 10px 14px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  transform: rotate(-2deg);
+}
+.s2 .timeline {
+  display: flex; gap: 24px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--red);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--ash);
+  text-transform: uppercase;
+}
+.s2 .timeline b { display: block; color: var(--red); font-size: 14px; margin-bottom: 2px; }
+
+/* plane icon, gently drifting */
+.drift-plane {
+  position: absolute;
+  top: 18%;
+  left: -60px;
+  width: 80px;
+  color: var(--red);
+  animation: drift 18s linear infinite;
+  opacity: .3;
+  z-index: 1;
+}
+@keyframes drift {
+  0%   { transform: translateX(0) translateY(0); }
+  50%  { transform: translateX(30vw) translateY(-30px); }
+  100% { transform: translateX(60vw) translateY(0); }
+}
+
+/* ------------------------------------ */
+/* SLIDE 3 — DESTINATION                */
+/* ------------------------------------ */
+.s3 {
+  background: var(--red);
+  color: #fff;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+.s3 h2 {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(44px, 6vw, 104px);
+  line-height: 0.88;
+  margin: 16px 0 24px;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+.s3 h2 em { font-style: normal; color: #fff; background: var(--ink); padding: 0 0.2em; }
+.s3 .sub { opacity: .88; max-width: 44ch; }
+
+.s3 .ratio-card {
+  background: rgba(0,0,0,.22);
+  border: 1px solid rgba(255,255,255,.18);
+  padding: clamp(22px, 2.6vw, 38px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  overflow: hidden;
+  container-type: inline-size;
+}
+.s3 .ratio-card .ratio-big {
+  font-family: var(--font-display);
+  font-weight: 900;
+  /* Scale relative to the CARD width via container query unit (cqw), not viewport.
+     Guarantees "1:50.000" (≈ 8 chars) always fits inside the card. */
+  font-size: clamp(42px, 22cqw, 96px);
+  line-height: 0.9;
+  color: #fff;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+  min-width: 0;
+  display: block;
+}
+.s3 .ratio-card .ratio-big span { color: var(--red-soft); }
+.s3 .ratio-labels {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.55);
+  margin-top: -6px;
+}
+.s3 .ratio-card .ratio-body {
+  font-size: clamp(15px, 1.1vw, 18px);
+  color: rgba(255,255,255,.88);
+  max-width: 28ch;
+  line-height: 1.45;
+}
+
+.s3 .dot-grid {
+  display: grid;
+  grid-template-columns: repeat(25, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 4px;
+  margin-top: 8px;
+  width: 100%;
+  aspect-ratio: 25 / 2;
+  max-height: 56px;
+}
+.s3 .dot-grid i {
+  background: rgba(255,255,255,.2);
+  border-radius: 50%;
+  aspect-ratio: 1;
+  min-width: 0;
+}
+.s3 .dot-grid i:nth-child(1) {
+  background: #fff;
+  box-shadow: 0 0 0 3px var(--red-soft);
+}
+
+/* ------------------------------------ */
+/* SLIDE 4 — QUOTE                      */
+/* ------------------------------------ */
+.s4 {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.1) 0%, rgba(0,0,0,.65) 55%, rgba(0,0,0,.92) 100%),
+    url('deck_images/04_quote_arzt_baby_up.jpg') center/cover no-repeat;
+  color: #fff;
+  justify-content: flex-end;
+}
+.s4 blockquote {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(36px, 5.6vw, 92px);
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+  margin: 0 0 24px;
+  max-width: 22ch;
+  text-transform: none;
+  quotes: "„" "" "";
+  color: #fff;
+}
+.s4 blockquote::before { content: open-quote; color: var(--red-soft); }
+.s4 blockquote::after  { content: close-quote; color: var(--red-soft); }
+.s4 .attr {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.75);
+  margin-bottom: 40px;
+}
+.s4 .stat-bar {
+  border-top: 1px solid rgba(255,255,255,.25);
+  padding-top: 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+.s4 .stat-bar .k { font-family: var(--font-display); font-size: clamp(32px, 4vw, 64px); color: var(--red-soft); line-height: 1; }
+.s4 .stat-bar .t { font-size: 17px; line-height: 1.35; max-width: 40ch; color: #fff; }
+
+/* ------------------------------------ */
+/* SLIDE 5 — RIPPLE                     */
+/* ------------------------------------ */
+.s5 {
+  background: var(--cream);
+  color: var(--ink);
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 56px;
+  align-items: center;
+}
+.s5 h2 {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(34px, 4vw, 64px);
+  line-height: 0.95;
+  margin: 14px 0 18px;
+  letter-spacing: -0.015em;
+  text-transform: uppercase;
+}
+.s5 .ripple-big {
+  font-family: var(--font-display);
+  font-size: clamp(90px, 16vw, 240px);
+  color: var(--red);
+  line-height: 0.8;
+  letter-spacing: -0.04em;
+  margin: 6px 0 0;
+}
+.s5 .ripple-big small { font-size: 0.4em; color: var(--ink); }
+.s5 .ripple-body {
+  font-size: clamp(17px, 1.3vw, 22px);
+  color: var(--ash);
+  max-width: 46ch;
+  margin-top: 22px;
+  line-height: 1.45;
+}
+
+.s5 .losses {
+  border-left: 3px solid var(--red);
+  padding-left: 28px;
+  display: grid; gap: 22px;
+}
+.s5 .losses .row { display: flex; flex-direction: column; }
+.s5 .losses .row b {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 2.6vw, 40px);
+  color: var(--red);
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.s5 .losses .row span {
+  font-size: 13px;
+  color: var(--ash);
+  letter-spacing: 0.02em;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.s5 .signoff {
+  grid-column: 1 / -1;
+  margin-top: 36px;
+  font-family: var(--font-display);
+  font-size: clamp(22px, 2vw, 32px);
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  padding-top: 22px;
+  border-top: 1px dashed var(--red);
+}
+
+/* ------------------------------------ */
+/* SLIDE 6 — WHY WE STAY                */
+/* ------------------------------------ */
+.s6 {
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.85) 0%, rgba(0,0,0,.55) 40%, rgba(0,0,0,.1) 75%, rgba(0,0,0,0) 100%),
+    url('deck_images/06_antwort_nurse_portrait_up.jpg') center right/cover no-repeat;
+  color: #fff;
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+.s6 h2 {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(40px, 5.4vw, 92px);
+  line-height: 0.9;
+  margin: 16px 0 22px;
+  letter-spacing: -0.015em;
+  text-transform: uppercase;
+}
+.s6 h2 .hi { color: var(--red-soft); }
+.s6 .pillars {
+  margin-top: 26px;
+  display: grid; gap: 22px;
+  max-width: 42ch;
+}
+.s6 .pillar {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 18px;
+  align-items: start;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255,255,255,.25);
+}
+.s6 .pillar .num {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  color: var(--red-soft);
+  padding-top: 6px;
+}
+.s6 .pillar h3 {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: clamp(17px, 1.4vw, 22px);
+  text-transform: uppercase;
+  color: #fff;
+  letter-spacing: -0.005em;
+}
+.s6 .pillar p { margin: 0; color: rgba(255,255,255,.82); font-size: 15px; line-height: 1.5; }
+
+/* ------------------------------------ */
+/* SLIDE 7 — INNOVATION                 */
+/* ------------------------------------ */
+.s7 {
+  background: var(--ink);
+  color: #fff;
+  justify-content: center;
+}
+.s7 h2 {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(38px, 4.6vw, 76px);
+  line-height: 0.92;
+  margin: 14px 0 44px;
+  text-transform: uppercase;
+  letter-spacing: -0.015em;
+  max-width: 20ch;
+}
+.s7 .proof-band {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-top: 56px;
+  padding-top: 32px;
+  border-top: 1px solid rgba(255,255,255,.18);
+}
+.s7 .proof-band .stat {
+  display: flex;
+  flex-direction: column;
+}
+.s7 .proof-band .stat b {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 2.6vw, 44px);
+  color: var(--red-soft);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.s7 .proof-band .stat span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.6);
+  margin-top: 8px;
+}
+.s7 h2 em { color: var(--red-soft); font-style: normal; }
+.s7 .grid-3 {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px;
+}
+.s7 .card {
+  border: 1px solid rgba(255,255,255,.15);
+  padding: 32px 28px;
+  display: flex; flex-direction: column;
+  gap: 14px;
+  position: relative;
+  transition: transform .4s ease, background .4s ease, border-color .4s ease;
+}
+.s7 .card:hover {
+  transform: translateY(-4px);
+  background: rgba(210,16,52,.08);
+  border-color: var(--red);
+}
+.s7 .card .ic { width: 44px; height: 44px; color: var(--red); }
+.s7 .card h3 {
+  font-family: var(--font-display);
+  font-size: clamp(18px, 1.4vw, 24px);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: -0.005em;
+}
+.s7 .card p { color: rgba(255,255,255,.75); font-size: 15px; line-height: 1.55; margin: 0; }
+.s7 .card .badge {
+  position: absolute; top: 20px; right: 20px;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+  color: rgba(255,255,255,.4);
+}
+
+/* ------------------------------------ */
+/* SLIDE 8 — REICHWEITE                 */
+/* ------------------------------------ */
+.s8 {
+  background: var(--paper);
+  color: var(--ink);
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+.s8 h2 {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(44px, 6vw, 104px);
+  line-height: 0.88;
+  margin: 14px 0 24px;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+.s8 h2 em { font-style: normal; color: var(--red); }
+.s8 .map-wrap {
+  position: relative;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.08);
+  box-shadow: 0 30px 60px -30px rgba(0,0,0,.2);
+}
+.s8 .map-wrap::before {
+  content: 'FOKUS-MISSION 2026';
+  position: absolute;
+  top: 16px; left: 16px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--red);
+  background: var(--cream);
+  padding: 6px 10px;
+  z-index: 2;
+}
+.s8 .map-wrap img { width: 100%; height: auto; }
+.s8 .country-list {
+  display: flex; flex-wrap: wrap; gap: 6px 10px;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px dashed var(--red);
+  max-width: 48ch;
+}
+.s8 .country-list span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  padding: 4px 10px;
+  border: 1px solid var(--red);
+  color: var(--red);
+  text-transform: uppercase;
+  border-radius: 2px;
+  background: #fff;
+}
+.s8 .country-list span.focus {
+  background: var(--red);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ------------------------------------ */
+/* SLIDE 9 — 85,3%                      */
+/* ------------------------------------ */
+.s9 {
+  background: var(--cream);
+  color: var(--ink);
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+.s9 .pct {
+  font-family: var(--font-display);
+  font-size: clamp(140px, 24vw, 360px);
+  color: var(--red);
+  line-height: 0.8;
+  letter-spacing: -0.045em;
+  display: flex; align-items: flex-start;
+}
+.s9 .pct sup { font-size: 0.35em; margin-left: 12px; margin-top: 0.3em; color: var(--ink); }
+.s9 h2 {
+  font-family: var(--font-display);
+  font-size: clamp(34px, 3.4vw, 54px);
+  line-height: 0.95;
+  margin: 12px 0 18px;
+  text-transform: uppercase;
+  letter-spacing: -0.015em;
+}
+.s9 .trust-stack {
+  display: grid; gap: 18px;
+  padding: 30px;
+  border: 1px solid var(--red);
+  background: #fff;
+}
+.s9 .trust-stack h3 { margin: 0; font-family: var(--font-display); font-size: 14px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--red); }
+.s9 .trust-stack p { margin: 0; color: var(--ash); font-size: 14px; line-height: 1.5; }
+.s9 .trust-stack .seal {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  align-self: start;
+}
+.s9 .trust-stack .seal b { color: var(--red-soft); }
+
+/* ------------------------------------ */
+/* SLIDE 10 — THE ASK / BOARDING PASS   */
+/* ------------------------------------ */
+.s10 {
+  background: var(--ink);
+  color: #fff;
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  grid-template-rows: auto 1fr;
+  gap: 24px clamp(28px, 3.2vw, 56px);
+  align-items: center;
+  position: relative;
+}
+.s10::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: url('deck_images/10_ask_maridi_nurses_up.jpg') center 30%/cover no-repeat;
+  opacity: 0.18;
+  filter: grayscale(.5);
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.5) 40%, rgba(0,0,0,1) 75%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.5) 40%, rgba(0,0,0,1) 75%);
+}
+.s10 > * { position: relative; z-index: 2; }
+.s10-header {
+  grid-column: 1 / -1;
+  align-self: end;
+  padding-top: 20px;
+}
+.s10-header h2 {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(34px, 4.4vw, 76px);
+  line-height: 0.92;
+  margin: 8px 0 0;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  max-width: 18ch;
+}
+.s10-header h2 em { font-style: normal; color: var(--red-soft); }
+.s10-text { align-self: center; padding-right: 20px; }
+.s10 .ask-body { font-size: clamp(15px, 1.15vw, 19px); color: rgba(255,255,255,.85); line-height: 1.55; max-width: 40ch; }
+.s10 .ask-q {
+  margin-top: 22px;
+  padding: 18px 22px;
+  border-left: 3px solid var(--red);
+  background: rgba(210,16,52,.12);
+  font-family: var(--font-display);
+  font-size: clamp(17px, 1.4vw, 24px);
+  line-height: 1.22;
+  max-width: 40ch;
+}
+.s10-pass {
+  align-self: center;
+  justify-self: center;
+  width: 100%;
+  max-width: 720px;
+}
+
+/* The boarding pass, built in pure HTML/CSS */
+.pass {
+  --pass-red: var(--red);
+  --pass-cream: var(--cream);
+  display: grid;
+  grid-template-columns: 2.2fr 1fr;
+  background: var(--pass-red);
+  color: #fff;
+  aspect-ratio: 16 / 9;
+  box-shadow: 0 40px 80px -30px rgba(0,0,0,.6), 0 12px 30px -12px rgba(210,16,52,.25);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  font-family: var(--font-body);
+  width: 100%;
+  max-width: 720px;
+  justify-self: center;
+  transform: rotate(-1.2deg);
+  transition: transform .5s cubic-bezier(.2,.9,.2,1), box-shadow .5s ease;
+}
+.pass:hover {
+  transform: rotate(0deg) translateY(-4px);
+  box-shadow: 0 50px 100px -30px rgba(0,0,0,.7), 0 18px 40px -14px rgba(210,16,52,.35);
+}
+@supports (animation-timeline: view()) {
+  .s10-pass {
+    animation: pass-land 1.3s cubic-bezier(.2, .9, .25, 1) both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 80%;
+  }
+}
+@keyframes pass-land {
+  from { opacity: 0; transform: translateX(60px) rotate(-6deg); }
+  to   { opacity: 1; transform: translateX(0) rotate(0deg); }
+}
+
+.pass::before { /* kartelrand serrated top edge */
+  content: '';
+  position: absolute;
+  top: -1px; left: 0; right: 0; height: 12px;
+  background:
+    radial-gradient(circle at 10px 100%, transparent 10px, var(--pass-cream) 10px) repeat-x;
+  background-size: 22px 12px;
+}
+.pass .pass-main {
+  padding: 28px 26px 22px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  position: relative;
+}
+.pass .pass-header { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 6px; }
+.pass .pass-logo {
+  background: #fff;
+  padding: 5px 8px;
+  border-radius: 2px;
+  display: inline-flex; align-items: center;
+  box-shadow: 0 2px 8px -2px rgba(0,0,0,.15);
+}
+.pass .pass-logo img {
+  height: 18px; width: auto; display: block;
+}
+.pass .tagline {
+  font-style: italic;
+  font-size: 11px;
+  opacity: .9;
+  font-family: var(--font-body);
+}
+.pass .pass-headline {
+  margin: 14px 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(24px, 3.2vw, 46px);
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+.pass .pass-fields {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 0.7fr 0.7fr;
+  gap: 14px 18px;
+  margin-top: 14px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.pass .pass-fields .lbl { opacity: .65; font-size: 9px; letter-spacing: 0.18em; margin-bottom: 2px; }
+.pass .pass-fields .val { font-family: var(--font-display); font-size: 14px; letter-spacing: -0.005em; text-transform: uppercase; }
+.pass .pass-fields .writable {
+  border-bottom: 1px dotted rgba(255,255,255,.65);
+  min-height: 22px;
+  padding-bottom: 2px;
+  color: rgba(255,255,255,.35);
+  font-family: var(--font-body);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  display: flex; align-items: flex-end;
+}
+
+.pass .pass-stub {
+  background: var(--pass-cream);
+  color: var(--pass-red);
+  position: relative;
+  padding: 18px 16px;
+  display: flex; flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  text-align: center;
+}
+.pass .pass-stub::before {
+  content: '';
+  position: absolute;
+  top: 12px; bottom: 12px; left: -6px;
+  width: 12px;
+  border-radius: 50%;
+  background: var(--ink);
+  opacity: 1;
+  background: radial-gradient(circle at 50% 50%, var(--ink) 4px, transparent 4px);
+  background-size: 12px 10px;
+  background-repeat: repeat-y;
+}
+.pass .pass-stub .stub-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--pass-red);
+  font-weight: 600;
+}
+.pass .pass-stub .qr {
+  width: 76px; height: 76px;
+  background-color: #fff;
+  background-image:
+    repeating-conic-gradient(#000 0 25%, #fff 0 50%);
+  background-size: 12px 12px;
+  background-position: 0 0;
+  border: 3px solid #fff;
+  outline: 2px solid #000;
+  position: relative;
+}
+.pass .pass-stub .qr::before,
+.pass .pass-stub .qr::after {
+  content: '';
+  position: absolute;
+  width: 18px; height: 18px;
+  background: #fff;
+  box-shadow: inset 0 0 0 3px #000, inset 0 0 0 6px #fff, inset 0 0 0 9px #000;
+}
+.pass .pass-stub .qr::before { top: 2px; left: 2px; }
+.pass .pass-stub .qr::after  { top: 2px; right: 2px; }
+.pass .pass-stub .year {
+  font-family: var(--font-display);
+  font-size: 52px;
+  line-height: 0.85;
+  color: var(--pass-red);
+  letter-spacing: -0.04em;
+}
+.pass .pass-stub .vert {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.22em;
+  color: var(--pass-red);
+  font-weight: 600;
+}
+
+/* ------------------------------------ */
+/* SLIDE 11 — WILLKOMMEN AN BORD        */
+/* ------------------------------------ */
+.s11 {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.05) 0%, rgba(0,0,0,.35) 50%, rgba(0,0,0,.85) 100%),
+    url('deck_images/07_hoffnung_mutter_baby_up.jpg') center 30%/cover no-repeat;
+  color: #fff;
+  justify-content: flex-end;
+}
+.s11 h2 {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(56px, 10vw, 160px);
+  line-height: 0.84;
+  letter-spacing: -0.025em;
+  margin: 0 0 22px;
+  text-transform: uppercase;
+  text-shadow: 0 2px 20px rgba(0,0,0,.25);
+}
+.s11 h2 span { color: var(--red-soft); display: block; }
+.s11 .thx {
+  font-family: var(--font-body);
+  font-size: clamp(18px, 1.5vw, 24px);
+  max-width: 38ch;
+  color: rgba(255,255,255,.92);
+  margin-bottom: 28px;
+}
+.s11 .signoff-row {
+  display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-end;
+  border-top: 1px solid rgba(255,255,255,.25);
+  padding-top: 20px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  color: rgba(255,255,255,.8);
+  text-transform: uppercase;
+}
+.s11 .signoff-row b { display: block; font-family: var(--font-display); color: #fff; font-size: 16px; letter-spacing: 0.05em; margin-bottom: 4px; }
+.s11 .signoff-row .badge-route {
+  display: inline-flex; gap: 10px; align-items: center;
+  font-family: var(--font-display);
+  font-size: 14px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.3);
+}
+.s11 .signoff-row .badge-route em { font-style: normal; color: var(--red-soft); }
+
+/* ------------------------------------ */
+/* RESPONSIVE                           */
+/* ------------------------------------ */
+@media (max-width: 960px) {
+  .s2, .s3, .s5, .s6, .s8, .s9, .s10 {
+    grid-template-columns: 1fr !important;
+    gap: 28px;
+  }
+  .s7 .grid-3 { grid-template-columns: 1fr; }
+  .pass { justify-self: start; transform: rotate(0); max-width: 100%; }
+  .s1 .departures { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+}
+
+/* print / static export friendly */
+@media print {
+  body { scroll-snap-type: none; overflow: visible; height: auto; }
+  .slide { page-break-after: always; min-height: auto; }
+  .rail, .status-strip { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Global brand chip (top-left, real AMREF logo in cream pill) -->
+<a class="brand-chip" href="#s1" aria-label="AMREF Health Africa — Zurück zum Start">
+  <img src="ressourcen/AMREF/Amref Health Africa Logo/Amref Health Africa Logo_transparent PNG.png" alt="AMREF Health Africa">
+</a>
+
+<!-- Subtle LIVE ticker (bottom-left, mission-control feel) -->
+<div class="deck-ticker" aria-hidden="true">
+  <span class="dot"></span>
+  <span>LIVE · AMREF 026 · SÜDSUDAN · MISSION 2026</span>
+</div>
+
+<!-- Rail nav -->
+<nav class="rail" aria-label="Deck-Navigation">
+  <a href="#s1" title="Gate"></a>
+  <a href="#s2" title="1957"></a>
+  <a href="#s3" title="Destination"></a>
+  <a href="#s4" title="Zitat"></a>
+  <a href="#s5" title="Die Welle"></a>
+  <a href="#s6" title="Antwort"></a>
+  <a href="#s7" title="Innovation"></a>
+  <a href="#s8" title="Reichweite"></a>
+  <a href="#s9" title="Wirkung"></a>
+  <a href="#s10" title="Boarding Call"></a>
+  <a href="#s11" title="Willkommen an Bord"></a>
+</nav>
+
+
+<!-- ======================================= -->
+<!-- SLIDE 1 — GATE / COVER                 -->
+<!-- ======================================= -->
+<section class="slide s1" id="s1" aria-label="Gate">
+  <div class="slide-meta on-dark">
+    <span class="track">TRACK 01 / 11</span>
+    <span>BRIEFING</span>
+  </div>
+
+  <h1 class="reveal">
+    MISSION 2026
+    <span class="line2">SÜDSUDAN</span>
+  </h1>
+  <p class="tagline reveal">Werden Sie Teil der Ground Crew. Ein Briefing in 11 Kapiteln.</p>
+
+  <div class="departures reveal">
+    <div><b>SÜDSUDAN</b>Destination</div>
+    <div><b>BERLIN · WIEN · ZÜRICH</b>Origin</div>
+    <div><b>MONATLICH</b>Intervall</div>
+    <div class="status"><b>BOARDING</b>Status</div>
+  </div>
+  <a class="advance" href="#s2" aria-label="Weiter zu Slide 2">Weiter</a>
+</section>
+
+
+<!-- ======================================= -->
+<!-- SLIDE 2 — HERITAGE 1957                -->
+<!-- ======================================= -->
+<section class="slide s2" id="s2" aria-label="Heritage">
+  <svg class="drift-plane" viewBox="0 0 100 40" fill="currentColor" aria-hidden="true">
+    <path d="M2 22l30-3 20-12 6 2-14 12 34-2 6 3-32 6-18 8-6-2 10-8-30-2z"/>
+  </svg>
+
+  <div class="slide-meta">
+    <span class="track">TRACK 02 / 11</span>
+    <span>CAPTAIN'S LOG</span>
+  </div>
+
+  <div class="heritage-text reveal">
+    <span class="kicker">CAPTAIN'S LOG · 1957</span>
+    <div class="huge-year">1957</div>
+    <h2>Die Legende<br>wird zur Mission.</h2>
+    <p class="body-lg">
+      Gründung der Amref Flying Doctors. Wir haben die Flugrettung in Afrika quasi erfunden.
+      Heute sind wir die größte afrikanische Gesundheitsorganisation — von
+      Afrikaner:innen, für Afrikaner:innen.
+    </p>
+    <div class="timeline">
+      <div><b>1957</b>Flying Doctors<br>gegründet</div>
+      <div><b>1970s</b>Primärversorgung<br>in die Dörfer</div>
+      <div><b>2024</b>35 Länder<br>Präsenz</div>
+    </div>
+  </div>
+
+  <div class="image-frame reveal-slow">
+    <div class="stamp">AMREF · Flying Doctors · SEIT 1957</div>
+  </div>
+  <a class="advance" href="#s3" aria-label="Weiter zu Slide 3">Weiter</a>
+</section>
+
+
+<!-- ======================================= -->
+<!-- SLIDE 3 — DESTINATION (SÜDSUDAN CRISIS) -->
+<!-- ======================================= -->
+<section class="slide s3" id="s3" aria-label="Destination Südsudan">
+  <div class="slide-meta on-dark">
+    <span class="track">TRACK 03 / 11</span>
+    <span>DESTINATION</span>
+  </div>
+
+  <div class="reveal">
+    <span class="kicker on-dark">DESTINATION · SÜDSUDAN</span>
+    <h2>Die leiseste<br>Katastrophe.</h2>
+    <p class="body-lg on-dark">
+      Die internationale Hilfe wurde massiv gekürzt. Schätzungen sagen:
+      ein Rückschritt um 14 Jahre — in einem Jahr. In weiten Teilen gibt es
+      keinen Strom. Kein Wasser. Und vor allem: keine Hilfe.
+    </p>
+  </div>
+
+  <div class="ratio-card reveal-slow">
+    <span class="eyebrow" style="color: var(--red-soft)">VERHÄLTNIS · ARZT &gt; MENSCHEN</span>
+    <div class="ratio-big">1<span>:50.000</span></div>
+    <div class="ratio-labels"><span>Arzt</span><span>Menschen</span></div>
+    <div class="dot-grid" aria-hidden="true">
+      <!-- 50 dots visual: 1 highlighted, 49 faded -->
+      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+    </div>
+    <p class="ratio-body">Ein Arzt. Für fünfzigtausend Menschen. Das ist die Realität in weiten Teilen des Landes.</p>
+  </div>
+  <a class="advance" href="#s4" aria-label="Weiter zu Slide 4">Weiter</a>
+</section>
+
+
+<!-- ======================================= -->
+<!-- SLIDE 4 — QUOTE                        -->
+<!-- ======================================= -->
+<section class="slide s4" id="s4" aria-label="Zitat">
+  <div class="slide-meta on-dark">
+    <span class="track">TRACK 04 / 11</span>
+    <span>STIMME AUS DEM LAND</span>
+  </div>
+
+  <blockquote class="reveal">
+    Wenn Amref geht, werden die Kinder sterben.
+  </blockquote>
+  <div class="attr reveal">— Gesundheitsbeamter, Südsudan</div>
+
+  <div class="stat-bar reveal-slow">
+    <div class="k">1 / 10</div>
+    <div class="t">
+      <strong style="color:#fff;">Jedes 10. Kind</strong> erlebt im Südsudan seinen 5. Geburtstag nicht.
+      Das müssen Sie wissen, bevor wir weitermachen.
+    </div>
+  </div>
+  <a class="advance" href="#s5" aria-label="Weiter zu Slide 5">Weiter</a>
+</section>
+
+
+<!-- ======================================= -->
+<!-- SLIDE 5 — DIE WELLE (USAID)            -->
+<!-- ======================================= -->
+<section class="slide s5" id="s5" aria-label="Die Welle">
+  <div class="slide-meta">
+    <span class="track">TRACK 05 / 11</span>
+    <span>DER RÜCKZUG</span>
+  </div>
+
+  <div class="reveal">
+    <span class="kicker">GLOBALE FOLGEN</span>
+    <h2>Kürzungen<br>kosten Leben.</h2>
+    <div class="ripple-big">9,4<small>&thinsp;MIO</small></div>
+    <p class="ripple-body">
+      vermeidbare Todesfälle weltweit bis 2030 — durch Kürzungen der
+      Entwicklungshilfe. Davon 2,5 Millionen Kinder unter fünf Jahren.
+      Das ist die Lancet-Prognose.
+    </p>
+  </div>
+
+  <div class="losses reveal-slow">
+    <div class="row"><b>90.000</b><span>schwangere Frauen entbinden ohne medizinische Betreuung.</span></div>
+    <div class="row"><b>100.000</b><span>Neugeborene erhalten keine postnatale Versorgung.</span></div>
+    <div class="row"><b>157.000</b><span>Babys und Kleinkinder bekommen keine Impfungen.</span></div>
+    <div class="row"><b>30 &raquo; 180 MIN</b><span>Fußweg zur mobilen Klinik — aus 30 Minuten werden drei Stunden.</span></div>
+  </div>
+
+  <div class="signoff reveal">Das können wir nicht zulassen.</div>
+  <a class="advance" href="#s6" aria-label="Weiter zu Slide 6">Weiter</a>
+</section>
+
+
+<!-- ======================================= -->
+<!-- SLIDE 6 — UNSERE ANTWORT               -->
+<!-- ======================================= -->
+<section class="slide s6" id="s6" aria-label="Unsere Antwort">
+  <div class="slide-meta on-dark">
+    <span class="track">TRACK 06 / 11</span>
+    <span>UNSERE ANTWORT</span>
+  </div>
+
+  <div class="reveal">
+    <span class="kicker on-dark">PRÄSENZ STATT RÜCKZUG</span>
+    <h2>Während andere gehen,<br><span class="hi">bleiben wir.</span></h2>
+    <p class="body-lg on-dark" style="max-width: 40ch;">
+      Wir warten nicht, bis die Menschen zu uns kommen. Unsere Teams gehen
+      zu Fuß oder mit dem Motorrad — direkt in die Dörfer.
+    </p>
+
+    <div class="pillars">
+      <div class="pillar">
+        <span class="num">01</span>
+        <div>
+          <h3>Präsenz</h3>
+          <p>Mobile Teams und Notfallstationen fangen dort auf, wo staatliche Strukturen enden.</p>
+        </div>
+      </div>
+      <div class="pillar">
+        <span class="num">02</span>
+        <div>
+          <h3>Die letzte Meile</h3>
+          <p>Basisversorgung, Medikamente und Notfallnahrung — dort, wo Wege abgeschnitten sind.</p>
+        </div>
+      </div>
+      <div class="pillar">
+        <span class="num">03</span>
+        <div>
+          <h3>Beständigkeit</h3>
+          <p>Wir sind seit Jahrzehnten da. Und wir bleiben, wenn andere gehen.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div></div><!-- empty right column; image is the background of this slide -->
+  <a class="advance" href="#s7" aria-label="Weiter zu Slide 7">Weiter</a>
+</section>
+
+
+<!-- ======================================= -->
+<!-- SLIDE 7 — INNOVATION                    -->
+<!-- ======================================= -->
+<section class="slide s7" id="s7" aria-label="Innovation">
+  <div class="slide-meta on-dark">
+    <span class="track">TRACK 07 / 11</span>
+    <span>WIE WIR FLIEGEN</span>
+  </div>
+
+  <div class="reveal">
+    <span class="kicker on-dark">INNOVATION · 2026</span>
+    <h2>Hilfe, <em>die ankommt.</em></h2>
+  </div>
+
+  <div class="grid-3">
+    <article class="card reveal">
+      <span class="badge">01 · LUFT</span>
+      <svg class="ic" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 28l18-3 12-9 4 2-8 8 10 1 2 2-10 2-10 5-3-2 6-5-21-1z"/></svg>
+      <h3>Medizin aus der Luft</h3>
+      <p>Wenn Wege durch Fluten oder Konflikte abgeschnitten sind, nutzen wir Drohnen für den Transport von Medikamenten und Laborproben.</p>
+    </article>
+    <article class="card reveal">
+      <span class="badge">02 · ERDE</span>
+      <svg class="ic" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="8"/><path d="M24 6v6M24 36v6M6 24h6M36 24h6M11 11l4 4M33 33l4 4M11 37l4-4M33 15l4-4"/></svg>
+      <h3>Klimasichere Logistik</h3>
+      <p>Keine einfachen Brunnen — Solar-Logistiksysteme, die auch bei extremen Wetterbedingungen funktionieren.</p>
+    </article>
+    <article class="card reveal">
+      <span class="badge">03 · WISSEN</span>
+      <svg class="ic" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14h32M8 22h32M8 30h20"/><circle cx="34" cy="32" r="6"/></svg>
+      <h3>Digitales Wissen</h3>
+      <p>Wir fliegen Wissen rein, statt Patienten raus. Hebammen werden digital geschult und vernetzt — nachhaltig und skalierbar.</p>
+    </article>
+  </div>
+
+  <div class="proof-band reveal-slow">
+    <div class="stat"><b>10 Mio+</b><span>Menschen erreicht · 2024</span></div>
+    <div class="stat"><b>240+</b><span>Mobile Kliniken</span></div>
+    <div class="stat"><b>35</b><span>Länder Präsenz</span></div>
+    <div class="stat"><b>1957</b><span>Seit der Gründung</span></div>
+  </div>
+  <a class="advance" href="#s8" aria-label="Weiter zu Slide 8">Weiter</a>
+</section>
+
+
+<!-- ======================================= -->
+<!-- SLIDE 8 — UNSERE REICHWEITE             -->
+<!-- ======================================= -->
+<section class="slide s8" id="s8" aria-label="Unsere Reichweite">
+  <div class="slide-meta">
+    <span class="track">TRACK 08 / 11</span>
+    <span>REICHWEITE</span>
+  </div>
+
+  <div class="reveal">
+    <span class="kicker">PRÄSENZ IN AFRIKA</span>
+    <h2>35 Länder.<br><em>Eine Mission.</em></h2>
+    <p class="body-lg">
+      Wir sind dort, wo die Hilfe am dringendsten gebraucht wird —
+      und wir bleiben, wenn andere gehen. 2026 liegt unser Fokus auf dem
+      Südsudan.
+    </p>
+
+    <div class="country-list">
+      <span class="focus">Südsudan · Fokus 2026</span>
+      <span>Äthiopien</span>
+      <span>Kenia</span>
+      <span>Uganda</span>
+      <span>Tansania</span>
+      <span>Malawi</span>
+      <span>Sambia</span>
+      <span>Senegal</span>
+      <span>+ 27 weitere</span>
+    </div>
+  </div>
+
+  <div class="map-wrap reveal-slow">
+    <img src="deck_images/08_reichweite_afrika_karte.png" alt="Karte: Präsenz von Amref Health Africa in Afrika, 35 Länder, Fokus Südsudan.">
+  </div>
+  <a class="advance" href="#s9" aria-label="Weiter zu Slide 9">Weiter</a>
+</section>
+
+
+<!-- ======================================= -->
+<!-- SLIDE 9 — WIRKUNG / TRUST               -->
+<!-- ======================================= -->
+<section class="slide s9" id="s9" aria-label="Ihre Wirkung">
+  <div class="slide-meta">
+    <span class="track">TRACK 09 / 11</span>
+    <span>IHRE WIRKUNG</span>
+  </div>
+
+  <div class="reveal">
+    <span class="kicker">IHRE SPENDE · WIRKUNG</span>
+    <div class="pct">85,3<sup>%</sup></div>
+    <h2>Wirkung — direkt<br>vor Ort.</h2>
+    <p class="body-lg">
+      Über 85 % Ihrer Spende fließen direkt in Gesundheits-
+      und Ausbildungsprojekte. Nicht in Overhead. Sondern in
+      Medikamente, Hebammen und mobile Kliniken.
+    </p>
+  </div>
+
+  <div class="trust-stack reveal-slow">
+    <h3>Geprüfte Sicherheit</h3>
+    <p>Amref Health Africa Deutschland trägt das DZI Spendensiegel — das Gütesiegel für seriöse Spendenorganisationen in Deutschland.</p>
+    <span class="seal"><b>●</b> DZI · SPENDEN-SIEGEL</span>
+    <h3 style="margin-top: 8px;">Von Afrikaner:innen geführt</h3>
+    <p>Entscheidungen fallen dort, wo die Hilfe gebraucht wird. Nicht in Europa.</p>
+  </div>
+  <a class="advance" href="#s10" aria-label="Weiter zu Slide 10">Weiter</a>
+</section>
+
+
+<!-- ======================================= -->
+<!-- SLIDE 10 — BOARDING CALL / ASK          -->
+<!-- ======================================= -->
+<section class="slide s10" id="s10" aria-label="Boarding Call">
+  <div class="slide-meta on-dark">
+    <span class="track">TRACK 10 / 11</span>
+    <span>BOARDING CALL</span>
+  </div>
+
+  <div class="s10-header reveal">
+    <span class="kicker on-dark">DAS ANGEBOT</span>
+    <h2>Werden Sie Teil der <em>Ground Crew.</em></h2>
+  </div>
+
+  <div class="s10-text reveal">
+    <p class="ask-body">
+      Mit Ihrer monatlichen Unterstützung sichern Sie Medikamente,
+      Notfallnahrung und die Ausbildung von Hebammen im Südsudan —
+      Monat für Monat, Leben für Leben.
+    </p>
+    <div class="ask-q">
+      Darf ich Sie heute mit<br>auf die Boarding-Liste setzen?
+    </div>
+  </div>
+
+  <!-- The actual Mission Pass — pure HTML/CSS -->
+  <div class="s10-pass reveal-slow">
+  <div class="pass" role="img" aria-label="Mission Pass · AMREF Ground Crew">
+    <div class="pass-main">
+      <div class="pass-header">
+        <div class="pass-logo">
+          <img src="ressourcen/AMREF/Amref Health Africa Logo/Amref Health Africa Logo_transparent PNG.png" alt="AMREF Health Africa">
+        </div>
+        <div class="tagline">Für ein gesundes Afrika.</div>
+      </div>
+
+      <h3 class="pass-headline">Willkommen<br>an Bord.</h3>
+
+      <div class="pass-fields">
+        <div>
+          <div class="lbl">Passagier:in</div>
+          <div class="writable">Ihr Name hier</div>
+        </div>
+        <div>
+          <div class="lbl">Flug Nr</div>
+          <div class="val">AMREF 026</div>
+        </div>
+        <div>
+          <div class="lbl">Von</div>
+          <div class="val">DACH</div>
+        </div>
+        <div>
+          <div class="lbl">Nach</div>
+          <div class="val">SÜDSUDAN</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pass-stub">
+      <span class="stub-label">BORDKARTE</span>
+      <div class="qr" aria-hidden="true"></div>
+      <div class="year">1957</div>
+      <span class="vert">FLYING DOCTORS SEIT 1957</span>
+    </div>
+  </div>
+  </div>
+  <a class="advance" href="#s11" aria-label="Weiter zu Slide 11">Weiter</a>
+</section>
+
+
+<!-- ======================================= -->
+<!-- SLIDE 11 — WILLKOMMEN AN BORD           -->
+<!-- ======================================= -->
+<section class="slide s11" id="s11" aria-label="Willkommen an Bord">
+  <div class="slide-meta on-dark">
+    <span class="track">TRACK 11 / 11</span>
+    <span>ARRIVAL</span>
+  </div>
+
+  <h2 class="reveal">
+    Willkommen<br>
+    <span>an Bord.</span>
+  </h2>
+
+  <p class="thx reveal">
+    Sie sind jetzt Teil der Mission. Monat für Monat bewegen wir gemeinsam,
+    was einzelne Organisationen nicht mehr bewegen. Vielen Dank.
+  </p>
+
+  <div class="signoff-row reveal">
+    <div>
+      <b>AMREF HEALTH AFRICA</b>
+      Deutschland · Österreich · Schweiz
+    </div>
+    <div>
+      <b>GROUND CREW</b>
+      Ihre Crew-Nummer folgt per Post.
+    </div>
+    <div class="badge-route">
+      DACH <em>&raquo;</em> SÜDSUDAN · MISSION 2026
+    </div>
+  </div>
+  <a class="advance" href="#s1" aria-label="Zurück zum Start">Zurück zum Start</a>
+</section>
+
+</body>
+</html>
