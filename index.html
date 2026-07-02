@@ -104,16 +104,23 @@
         .forEach((el) => { el.textContent = el.getAttribute("data-count-to"); });
     }
 
-    /* Presenter open + popup-block fallback (a user-gesture <a> is never blocked) */
+    /* Presenter open + popup-block fallback (a user-gesture <a> is never blocked).
+       The presenter must mirror THIS deck — forward the resolved ?deck id, else
+       presenter.js falls back to its DEFAULT_DECK and shows the wrong deck. */
+    const presenterUrl = (() => {
+      const u = new URL("presenter.html", document.baseURI);
+      u.searchParams.set("deck", safe);
+      return u.toString();
+    })();
     function showPresenterFallback() {
       if (document.getElementById("pv-fallback")) return;
       const bar = document.createElement("div");
       bar.id = "pv-fallback"; bar.className = "pv-fallback";
-      bar.innerHTML = 'Allow pop-ups, or <a href="presenter.html" target="_blank" rel="noopener">Open presenter ↗</a>';
+      bar.innerHTML = `Allow pop-ups, or <a href="${presenterUrl}" target="_blank" rel="noopener">Open presenter ↗</a>`;
       document.body.appendChild(bar);
     }
     function openPresenter() {
-      const w = window.open("presenter.html", "fmnts-presenter", "width=1280,height=800,menubar=no,toolbar=no");
+      const w = window.open(presenterUrl, "fmnts-presenter", "width=1280,height=800,menubar=no,toolbar=no");
       if (!w || w.closed || typeof w.closed === "undefined") showPresenterFallback();
     }
     const openBtn = document.getElementById("open-presenter");

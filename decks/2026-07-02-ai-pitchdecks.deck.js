@@ -23,6 +23,7 @@ export const deck = {
     {
       id: "cover",
       archetype: "cover",
+      chrome: "dark",
       eyebrow: "KNOWLEDGE TRANSFER · CUSTOMER CARE",
       headline: "AI Pitchdecks.",
       sub: "Von der Brand-Analyse zum fertigen Street-Pitch — mit Claude Code",
@@ -346,6 +347,7 @@ export const deck = {
     {
       id: "closing",
       archetype: "closing",
+      chrome: "dark",
       statement: "Kopiert das Template. Baut euer erstes Deck.",
       sub: "Fragen? Erst 06-troubleshooting.md — dann Samuel.",
       site: "formunauts.com",
