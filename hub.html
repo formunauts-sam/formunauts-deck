@@ -20,20 +20,22 @@
   </header>
 
   <main class="hub">
-    <!-- "Up next" — newest deck as hero band + the ghost plan card. hub.js fills both. -->
+    <!-- Active demo — the live-or-newest deck as a hero band + the ghost
+         plan card. hub.js fills both. The grouped library below owns the
+         "Up next / Recent / Archive" section labels, so the hero band gets
+         its own label to avoid a duplicate "Up next" heading. -->
     <section class="hub-next" aria-labelledby="hub-next-heading">
-      <h2 class="hub-section__label overline" id="hub-next-heading">Up next</h2>
+      <h2 class="hub-section__label overline" id="hub-next-heading">Active demo</h2>
       <div class="hub-next__row">
         <div id="hub-hero"></div>
         <div id="hub-plan"></div>
       </div>
     </section>
 
-    <!-- Library — one card per manifest entry, newest first. hub.js fills it. -->
-    <section class="hub-library" aria-labelledby="hub-library-heading">
-      <h2 class="hub-section__label overline" id="hub-library-heading">All demos</h2>
-      <div id="hub-grid" class="hub-grid"></div>
-    </section>
+    <!-- Library — grouped sections (Up next / Recent / Archive), one card
+         per manifest entry. hub.js fills #hub-grid with the whole grouped
+         set; each group carries its own labelled heading. -->
+    <div id="hub-grid" class="hub-library"></div>
   </main>
 
   <footer class="hub-foot">

@@ -92,6 +92,9 @@ summary:focus-visible {
 /* ============================================================
    Live peek thumbnails — a 1280×720 deck iframe scaled to fit.
    hub.js sets --peek-scale = wrapperWidth / 1280 (transform only).
+   The iframe is injected lazily (IntersectionObserver), so the
+   wrapper holds a calm blue field until the peek boots — a large
+   library never spins up N reveal instances at once.
    ============================================================ */
 .hub-peek {
   position: relative;
@@ -99,7 +102,11 @@ summary:focus-visible {
   width: 100%;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  background: var(--blue-50);
+  /* soft ring motif on the placeholder so a not-yet-booted peek reads
+     as intentional (a launch pad), not as a blank hole */
+  background:
+    radial-gradient(120px 120px at 78% 30%, var(--blue-100), transparent 70%),
+    var(--blue-50);
 }
 .hub-peek iframe {
   position: absolute;
@@ -237,8 +244,17 @@ summary:focus-visible {
 }
 
 /* ============================================================
-   Library — bento rhythm (7/5 alternating, never uniform)
+   Library — grouped sections (Up next / Recent / Archive), each
+   a bento grid (7/5 alternating, never uniform). Groups stack
+   with breathing room; the shared section rail heads each one.
    ============================================================ */
+.hub-library {
+  display: grid;
+  gap: var(--space-16);
+}
+.hub-group { display: block; }
+.hub-group .hub-section__label { margin-bottom: var(--space-6); }
+
 .hub-grid {
   display: grid;
   grid-template-columns: var(--grid-bento);
@@ -261,8 +277,19 @@ summary:focus-visible {
   transition: transform var(--dur-normal) var(--ease-orbit), box-shadow var(--dur-normal) var(--ease-orbit);
 }
 .hub-card:hover { transform: var(--hub-lift); box-shadow: var(--elevation-4); }
+/* When a Share popover is open, lift the card clip so the panel can
+   escape the card bottom. The stage rounds its own top corners (below)
+   so the thumbnail still reads clean without the card's clip. */
+.hub-card:has(.hub-share[open]) { overflow: visible; z-index: 2; }
 
-.hub-card__stage { position: relative; display: block; border-bottom: 1px solid var(--hub-line); }
+.hub-card__stage {
+  position: relative;
+  display: block;
+  border-bottom: 1px solid var(--hub-line);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  overflow: hidden;
+}
 .hub-card__stage::after {
   content: "Open deck";
   position: absolute;
@@ -297,11 +324,44 @@ summary:focus-visible {
 .hub-card__body > :not(.hub-card__ghost) { position: relative; }  /* text paints above the ghost */
 .hub-card__date {
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: var(--body-xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--fg-muted);
+}
+
+/* --- Status chip — only rendered when a deck sets meta.status.
+   Blue is the platform default; red is reserved for the ONE stopper
+   (a delivered/closed deck), never used decoratively elsewhere. --- */
+.hub-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  font-size: var(--overline);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: var(--overline-lh);
+}
+.hub-chip--draft { background: var(--bg-muted); color: var(--fg-muted); }
+.hub-chip--ready { background: var(--blue-100); color: var(--fmnts-primary-dark); }
+.hub-chip--live {
+  background: var(--fmnts-primary);
+  color: var(--fg-on-primary);
+}
+/* the single red stopper in the library: a delivered deck is done */
+.hub-chip--delivered { background: var(--fmnts-secondary-25); color: var(--fmnts-secondary); }
+
+.hub-card__owner {
+  margin: 0;
+  font-size: var(--body-xs);
+  line-height: var(--body-xs-lh);
+  color: var(--fg-subtle);
 }
 .hub-card__title {
   margin: 0;
@@ -390,6 +450,62 @@ summary:focus-visible {
 .hub-btn.is-copied { background: var(--success-100); border-color: var(--success-500); color: var(--success-700); }
 
 /* ============================================================
+   Per-deck Share — a <details> popover: copy-link + a small QR.
+   Collapsed by default so a big library is not a wall of codes.
+   The QR is filled by the QR module on first open; if that module
+   is absent the slot removes itself and only the copy row shows.
+   ============================================================ */
+.hub-share { position: relative; display: inline-block; }
+.hub-share__summary { list-style: none; cursor: pointer; }
+.hub-share__summary::-webkit-details-marker { display: none; }
+.hub-share[open] > .hub-share__summary { border-color: var(--fmnts-primary); color: var(--fmnts-primary); }
+.hub-share--onblue[open] > .hub-share__summary {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--neutral-0);
+  color: var(--neutral-0);
+}
+
+.hub-share__panel {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  width: max-content;
+  max-width: 260px;
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-4);
+  /* the panel is always light so the QR + url read cleanly, even when
+     the trigger sits on the blue hero */
+  color: var(--fg-default);
+}
+.hub-share--onblue .hub-share__panel { right: 0; left: auto; }
+
+.hub-share__copy { width: 100%; }
+.hub-share__qr {
+  display: none;                 /* shown only once a real QR lands */
+  place-items: center;
+  padding: var(--space-3);
+  background: var(--neutral-0);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+.hub-share__qr.has-qr { display: grid; }
+.hub-share__qr svg { display: block; width: 148px; height: 148px; }
+.hub-share__url {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--fg-muted);
+  overflow-wrap: anywhere;
+}
+
+/* ============================================================
    Empty state + footer
    ============================================================ */
 .hub-empty {
@@ -400,6 +516,8 @@ summary:focus-visible {
   color: var(--fg-muted);
 }
 .hub-empty code { font-family: var(--font-mono); font-size: 13px; color: var(--fmnts-primary-dark); }
+/* a softer note when the hero IS the whole library (only one deck) */
+.hub-empty--calm { border-style: solid; border-color: var(--border-subtle); background: var(--bg-surface); }
 
 .hub-foot {
   max-width: var(--hub-max);

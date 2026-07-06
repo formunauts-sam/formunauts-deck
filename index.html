@@ -109,7 +109,9 @@
       const engage = initCollab(Reveal, { deck, deckId: safe });
       // Wave 4: poll-archetype auto-open + on-deck result bars + reaction
       // ticker, riding the SAME authority transport the host created.
-      if (engage && engage.enabled) initHud(Reveal, engage);
+      // Wave 5a: pass deckId so the HUD's Join panel builds a viewer URL
+      // that carries ?deck=<id> (the room follows the right deck).
+      if (engage && engage.enabled) initHud(Reveal, engage, { deckId: safe });
     }
 
     /* Peek thumbnails (presenter previews): calm + correct — strip motion, fill count-ups */

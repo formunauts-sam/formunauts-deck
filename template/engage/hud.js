@@ -29,8 +29,23 @@
      .poll-opt__count       live vote count
      [data-poll-total]      running total
      [data-poll-status]     open/closed/leading status line
+
+   Wave 5a adds one more deck-side control: a small "Join" button that
+   opens the Join panel (engage/join.js) so the presenter can surface a
+   room QR mid-talk (§2.2). join.js is imported LAZILY on first use, so a
+   talk that never opens Join pays nothing, and a missing join.js/qr.mjs
+   degrades the button to a no-op (it simply does not appear).
    ============================================================ */
 import { REACTION_ORDER } from "./glyphs.js";
+
+/* engage/join.js is loaded on demand the first time the presenter reaches
+   for Join; imported relatively so it works under the GitHub Pages subpath. */
+const JOIN_MODULE_URL = "./join.js";
+
+/* A small inline rocket-and-ring glyph for the Join button — on brand, no
+   emoji. Uses currentColor so CSS paints it brand blue. */
+const JOIN_SVG =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 3c2.5.3 4.2 2 4.5 4.5.2 2-.7 4.3-2.6 6.2l-1.3 1.3-3.6-3.6 1.3-1.3C18.7 8.2 16 5.5 13.7 7.4l-1.3 1.3-1.8-1.8 1.3-1.3C13.1 3.7 13.4 2.9 14.5 3Z" fill="currentColor"/><path d="M8.5 14.5 6 17m2.5-2.5L11 17m-4.5-.5L4 19" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/><circle cx="15" cy="9" r="1.4" fill="currentColor"/></svg>';
 
 /* The presenter authors poll-open with the slide's option ids as the tokens.
    The reducer stores votes by OPTION INDEX (its votes[] array), and the
@@ -217,6 +232,90 @@ export function initHud(Reveal, engage, opts = {}) {
     t.classList.add("is-pulse");
   });
 
+  /* ================= Join control (Wave 5a) ================= */
+  // A small always-reachable "Join" button on the deck. Clicking it opens the
+  // Join panel (engage/join.js), which surfaces the room QR + 6-char code +
+  // live watching count so the audience can join mid-talk (§2.2). join.js is
+  // imported LAZILY on first click; if it (or vendor/qr.mjs) is unavailable
+  // the button degrades gracefully — the panel just never opens.
+  let joinBtn = null;
+  let joinPanel = null; // the initJoin handle, once loaded
+  let joinLoading = false;
+  function ensureJoinStyles() {
+    if (document.getElementById("fmnts-hud-join-style")) return;
+    const css = `
+    .hud-join {
+      position: fixed; right: 20px; bottom: 68px; z-index: 60;
+      display: inline-flex; align-items: center; gap: 7px;
+      height: 38px; padding: 0 15px 0 11px;
+      border: 1px solid var(--border-default); border-radius: var(--radius-pill);
+      background: var(--bg-surface); color: var(--fmnts-primary);
+      font-family: var(--font-body); font-size: var(--body-sm); font-weight: 600;
+      box-shadow: var(--elevation-3); cursor: pointer;
+      transition: transform var(--duration-fast) var(--ease-out-expo),
+                  border-color var(--duration-fast) var(--ease-out-expo),
+                  background var(--duration-fast) var(--ease-out-expo);
+    }
+    .hud-join svg { width: 18px; height: 18px; display: block; }
+    .hud-join:hover { border-color: var(--fmnts-primary); transform: translateY(-2px); background: var(--blue-50); }
+    .hud-join:active { transform: translateY(0) scale(.96); }
+    .hud-join:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--border-focus); }
+    .hud-join.is-open { background: var(--fmnts-primary); border-color: var(--fmnts-primary); color: var(--fg-on-primary); }
+    body.print-pdf .hud-join, body.is-peek .hud-join { display: none !important; }
+    @media (prefers-reduced-motion: reduce) { .hud-join:hover { transform: none; } }
+    `;
+    const style = document.createElement("style");
+    style.id = "fmnts-hud-join-style";
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
+  function ensureJoinButton() {
+    if (joinBtn) return joinBtn;
+    ensureJoinStyles();
+    joinBtn = document.createElement("button");
+    joinBtn.type = "button";
+    joinBtn.className = "hud-join";
+    joinBtn.setAttribute("aria-haspopup", "dialog");
+    joinBtn.setAttribute("aria-expanded", "false");
+    joinBtn.innerHTML = `${JOIN_SVG}<span>Join</span>`;
+    joinBtn.addEventListener("click", onJoinClick);
+    document.body.appendChild(joinBtn);
+    return joinBtn;
+  }
+  async function onJoinClick() {
+    // Toggle if already loaded; otherwise lazy-load then open.
+    if (joinPanel) {
+      joinPanel.toggle();
+      syncJoinButton();
+      return;
+    }
+    if (joinLoading) return;
+    joinLoading = true;
+    try {
+      const mod = await import(JOIN_MODULE_URL);
+      const init = mod && (mod.initJoin || mod.default);
+      if (typeof init === "function") {
+        joinPanel = init(engage, { deckId: opts.deckId, room: opts.room });
+        if (joinPanel && joinPanel.enabled) {
+          joinPanel.open();
+          syncJoinButton();
+        }
+      }
+    } catch (err) {
+      console.warn("[hud] Join panel unavailable", err);
+    } finally {
+      joinLoading = false;
+    }
+  }
+  function syncJoinButton() {
+    if (!joinBtn) return;
+    const isOpen = !!(joinPanel && joinPanel.isOpen && joinPanel.isOpen());
+    joinBtn.classList.toggle("is-open", isOpen);
+    joinBtn.setAttribute("aria-expanded", String(isOpen));
+  }
+  // Surface the button on boot so it is reachable at any point in the talk.
+  ensureJoinButton();
+
   /* ---- lifecycle ---- */
   if (Reveal.isReady && Reveal.isReady()) onSlideChanged();
   Reveal.on("ready", onSlideChanged);
@@ -235,6 +334,11 @@ export function initHud(Reveal, engage, opts = {}) {
       Reveal.off && Reveal.off("slidechanged", onSlideChanged);
       Reveal.off && Reveal.off("ready", onSlideChanged);
       if (tickerEl) tickerEl.remove();
+      if (joinBtn) {
+        joinBtn.removeEventListener("click", onJoinClick);
+        joinBtn.remove();
+      }
+      if (joinPanel && typeof joinPanel.destroy === "function") joinPanel.destroy();
       closeSlidePoll();
     },
   };
