@@ -26,6 +26,8 @@
    ships it). If it is missing or its API differs, share
    degrades to copy-link only — the import never breaks the hub.
    ============================================================ */
+import { initHubBrandbar } from "../nav.js";
+
 const ID_SAFE = /^[0-9A-Za-z._-]+$/;   // same gate index.html applies to ?deck=
 const PEEK_W = 1280;                    // deck canvas width — peeks scale down from this
 const COPY_RESET_MS = 1600;
@@ -517,6 +519,10 @@ function onShareToggle(details, entriesById) {
    Boot
 --------------------------------------------------------------- */
 (async function init() {
+  // Persistent wordmark bar — anchors the hub as the tool's home
+  // ("you are here: Library"). Idempotent; safe before the mounts load.
+  initHubBrandbar();
+
   const heroMount = document.getElementById("hub-hero");
   const planMount = document.getElementById("hub-plan");
   const gridMount = document.getElementById("hub-grid");

@@ -1,0 +1,151 @@
+/* ============================================================
+   nav.css — shared front-of-house navigation affordances.
+   ------------------------------------------------------------
+   CHROME. Never edited per-demo. Token-driven from brand.css so
+   both surfaces read as FORMUNAUTS, not a dev tool. Two pieces,
+   one visual language, rendered by template/nav.js:
+
+     · .deck-nav  — a small "Library" pill on the DECK launch
+       state (top-left), the discoverable way back to hub.html.
+       It NEVER shows to an audience: hidden under fullscreen,
+       body.is-peek (presenter thumbnails), and body.print-pdf
+       (static export), reusing the deck's existing conventions.
+
+     · .hub-brandbar — a persistent wordmark bar on the HUB,
+       anchoring it as the company tool's home ("you are here").
+
+   All URLs are RELATIVE so the pages work on GitHub Pages under
+   a subpath. No emoji, no em-dash.
+   ============================================================ */
+
+/* ============================================================
+   DECK side — "Library" pill, top-left launch affordance
+   ============================================================ */
+.deck-nav {
+  position: fixed;
+  left: 16px;
+  top: 14px;
+  z-index: 60;   /* above the ink canvas (z-55), same tier as .present-btn */
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--body-sm);
+  line-height: 1;
+  padding: 8px 14px 8px 10px;
+  border-radius: var(--radius-pill);
+  color: var(--fmnts-primary-dark);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--elevation-2);
+  text-decoration: none;
+  opacity: 0.72;
+  transition: opacity var(--dur-fast) var(--ease-orbit),
+              background var(--dur-fast) var(--ease-orbit),
+              border-color var(--dur-fast) var(--ease-orbit),
+              transform var(--dur-instant) var(--ease-orbit);
+}
+.deck-nav:hover,
+.deck-nav:focus-visible {
+  opacity: 1;
+  border-color: var(--fmnts-primary);
+  background: var(--neutral-0);
+}
+.deck-nav:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+.deck-nav:active { transform: translateY(1px); }
+
+/* the orbital-ring glyph sits in a small blue chip so the pill reads
+   as "you are in a deck, this is the way home", not a generic link */
+.deck-nav__glyph {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border-radius: 50%;
+  background: var(--blue-100);
+  color: var(--fmnts-primary);
+}
+.deck-nav__glyph svg { display: block; width: 14px; height: 14px; }
+.deck-nav__arrow { color: var(--fmnts-primary); }
+
+/* HIDE the pill everywhere it must never leak onto the projector:
+   - fullscreen present (Present ▸ requests fullscreen on <html>, so the
+     pill is a descendant of the fullscreen element and :fullscreen matches)
+   - peek thumbnails (presenter previews)
+   - static PDF export
+   Mirrors the .present-btn / body.is-peek / body.print-pdf conventions
+   in deck.css. Belt-and-braces: nav.js also toggles body.is-fullscreen
+   on fullscreenchange for engines where :fullscreen is unreliable. */
+:fullscreen .deck-nav,
+body.is-fullscreen .deck-nav,
+body.is-peek .deck-nav,
+body.print-pdf .deck-nav { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .deck-nav { transition: none; }
+}
+
+/* ============================================================
+   HUB side — persistent wordmark bar ("you are here: Library")
+   ============================================================ */
+.hub-brandbar {
+  max-width: var(--hub-max);
+  margin: 0 auto;
+  padding: var(--space-5) var(--hub-gutter) 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.hub-brandbar__home {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
+  color: var(--fg-default);
+}
+.hub-brandbar__glyph {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  border-radius: 50%;
+  background: var(--fmnts-primary);
+  color: var(--fg-on-primary);
+}
+.hub-brandbar__glyph svg { display: block; width: 15px; height: 15px; }
+.hub-brandbar__wordmark {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--body-md);
+  letter-spacing: 0.02em;
+  color: var(--fg-default);
+}
+/* "you are here" — a quiet breadcrumb after the wordmark */
+.hub-brandbar__here {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: var(--overline);
+  line-height: var(--overline-lh);
+  letter-spacing: 0.24em;
+  color: var(--fg-subtle);
+}
+.hub-brandbar__sep { color: var(--fg-subtle); }
+
+.hub-brandbar__home:hover .hub-brandbar__wordmark,
+.hub-brandbar__home:focus-visible .hub-brandbar__wordmark { color: var(--fmnts-primary-dark); }
+.hub-brandbar__home:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* The brandbar now carries the top-of-page rhythm, so pull the masthead's
+   own large top padding in when it directly follows the bar (hub.css owns
+   the .hub-top padding; this only tightens the seam between the two). */
+.hub-brandbar + .hub-top { padding-top: var(--space-6); }

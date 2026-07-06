@@ -191,9 +191,13 @@ function injectStyles() {
   }
   .fc-pointer.is-on { opacity: .92; }
 
-  /* ---- poll card ---- */
+  /* ---- poll card ----
+     Anchored bottom-LEFT (raised above the status chip) so it never sits
+     under the shared bottom-right control cluster (Present/Presenter/Join)
+     or the bottom-center marker toolbar. index.html owns those controls; we
+     move OUR card out of their way instead of touching them. */
   .fc-poll {
-    position: absolute; right: 20px; bottom: 20px; width: 340px; max-width: calc(100vw - 40px);
+    position: absolute; left: 20px; bottom: 64px; width: 340px; max-width: calc(100vw - 40px);
     background: var(--bg-surface); color: var(--fg-default);
     border-radius: var(--radius-lg); box-shadow: var(--elevation-4);
     padding: var(--space-5); pointer-events: auto;
@@ -737,6 +741,17 @@ function wire(cx) {
 
   /* ---- poll rendering (both roles) ---- */
   function applyPoll(poll) {
+    // A dismissal (poll-close) or an absent poll must TEAR THE CARD DOWN, not
+    // re-render it: the authority sends {id, open:false, dismissed:true} with
+    // no votes/options, so there is nothing to tally. Detect that (or a poll
+    // that is closed with no votes array) and hide instead. renderPoll(null)
+    // removes is-open + sets hidden. Reset local view so a re-open starts clean.
+    if (!poll || poll.dismissed || (poll.open === false && !poll.votes)) {
+      view.poll = null;
+      view.votedOption = null;
+      if (ui.renderPoll) ui.renderPoll(null, view.votedOption, castVote);
+      return;
+    }
     view.poll = poll;
     if (ui.renderPoll) ui.renderPoll(poll, view.votedOption, castVote);
   }

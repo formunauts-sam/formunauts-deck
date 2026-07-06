@@ -62,6 +62,11 @@ const PEEK_MAX_SCALE = 2.0; // clamps too, so our letterbox math must match
 const POINTER_SEND_MS = 33; // ~30Hz pointer/stroke send throttle
 const INK_PREVIEW_WIDTH = 4; // author px — mirrors marker ink defaultWidth
 const INK_DEFAULT_COLOR = "#0074C8"; // brand primary — default ink colour
+const LASER_CORE = "#E03B50"; // brand secondary — the deck laser core colour
+const LASER_DOT_R = 6; // author px — mirrors the deck laser dotRadius
+const LASER_TRAIL_MS = 900; // ms a mirror trail point lives before it fades
+const SPOTLIGHT_VEIL = "rgba(4,15,26,0.55)"; // preview dim wash (lighter than deck)
+const SPOTLIGHT_RADIUS = 140; // author px — mirrors the deck spotlight radius
 
 /* --------------------------------------------------------------
    Tiny helpers
@@ -277,6 +282,11 @@ class Presenter {
     this.inkLastLocal = null; // last overlay-space point of the live stroke
     this.lastPointerSentAt = 0; // performance.now() of the last send (throttle)
     this.overlayCtx = null;
+    /* Laser mirror: short fading trail of overlay-space points {x,y,scale,t}
+       so the presenter sees WHERE they are pointing (the deck laser is
+       otherwise only visible to the audience). Redrawn on throttled move —
+       no RAF loop, so it stays compositor-light. */
+    this.laserTrail = [];
   }
 
   async init() {
@@ -557,7 +567,9 @@ class Presenter {
     if (this.el.current && this.currentSrcKey !== curKey) {
       this.pointPreview(this.el.current, s.h, s.v);
       this.currentSrcKey = curKey;
-      /* New slide → the deck's ink is per-slide; drop the local mirror. */
+      /* New slide → the deck's ink is per-slide; drop the local mirror
+         (ink strokes AND any laser trail) so nothing bleeds across slides. */
+      this.laserTrail = [];
       this.clearOverlay();
     }
 
@@ -929,6 +941,11 @@ class Presenter {
       this.inkLastLocal = null;
       this.bus.send({ type: "strokeEnd" });
     }
+    /* Wipe the laser/spotlight mirror on any tool change — the veil or comet
+       must not linger under a different tool (or after disarming). Ink keeps
+       its mirror until the slide changes, exactly as before. */
+    this.laserTrail = [];
+    if (this.tool === "laser" || this.tool === "spotlight") this.clearOverlay();
     this.tool = next;
     this.bus.send({ type: "tool", tool: next });
     this.syncToolStrip();
@@ -946,6 +963,7 @@ class Presenter {
 
   /* Clear both sides: the local mirror and the deck's current-slide ink. */
   clearAnnotations() {
+    this.laserTrail = [];
     this.clearOverlay();
     this.bus.send({ type: "clearInk" });
   }
@@ -1007,6 +1025,9 @@ class Presenter {
     /* Laser + spotlight ride bare movement (no button), ~30Hz. */
     if (performance.now() - this.lastPointerSentAt < POINTER_SEND_MS) return;
     this.lastPointerSentAt = performance.now();
+    /* Mirror the SAME normalized point locally so the presenter sees where
+       they are pointing — the deck laser/spotlight is otherwise audience-only. */
+    this.drawPointerMirror(n);
     this.bus.send({ type: "pointer", nx: n.nx, ny: n.ny });
   }
 
@@ -1036,6 +1057,10 @@ class Presenter {
   onAnnotLeave() {
     /* The vanishing laser fades on its own; the spotlight must hide. */
     if (this.tool === "laser" || this.tool === "spotlight") {
+      /* Clear the local mirror too, mirroring the deck: the pointer left the
+         preview, so the comet/veil should not stay frozen on the overlay. */
+      this.laserTrail = [];
+      this.clearOverlay();
       this.bus.send({ type: "pointerHide" });
     }
   }
@@ -1119,6 +1144,85 @@ class Presenter {
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
     ctx.stroke();
+    ctx.restore();
+  }
+
+  /* ---- Laser / spotlight local mirror ----
+     The deck renders these for the AUDIENCE; the presenter needs the same
+     feedback on their own preview. We redraw on throttled move (no RAF), so
+     it stays compositor-light. `n` is the SAME normalized point sent to the
+     deck, so what the presenter sees matches the audience exactly. */
+  drawPointerMirror(n) {
+    if (!this.overlayCtx) this.sizeInkOverlay(); // lazily size (no pointerdown here)
+    const p = this.overlayPoint(n);
+    if (this.tool === "spotlight") {
+      this.laserTrail = [];
+      this.drawSpotlightMirror(p);
+    } else if (this.tool === "laser") {
+      const now = performance.now();
+      this.laserTrail.push({ x: p.x, y: p.y, scale: p.scale, t: now });
+      while (this.laserTrail.length && now - this.laserTrail[0].t > LASER_TRAIL_MS) {
+        this.laserTrail.shift();
+      }
+      if (this.laserTrail.length > 120) this.laserTrail.shift(); // hard cap
+      this.drawLaserMirror(now);
+    }
+  }
+
+  /* Brand-red comet: a faint fading tail under a bright glowing head dot. */
+  drawLaserMirror(now) {
+    const ctx = this.overlayCtx;
+    if (!ctx) return;
+    this.clearOverlay();
+    const trail = this.laserTrail;
+    if (!trail.length) return;
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = LASER_CORE;
+    for (let i = 1; i < trail.length; i++) {
+      const a = trail[i - 1];
+      const b = trail[i];
+      const age = (now - b.t) / LASER_TRAIL_MS;
+      ctx.globalAlpha = Math.max(0, 1 - age) * 0.6;
+      ctx.lineWidth = Math.max(1, LASER_DOT_R * b.scale * (1 - age));
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+    const head = trail[trail.length - 1];
+    ctx.globalAlpha = 1;
+    ctx.shadowColor = LASER_CORE;
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = LASER_CORE;
+    ctx.beginPath();
+    ctx.arc(head.x, head.y, Math.max(1.5, LASER_DOT_R * head.scale), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /* Dim veil with a bright clear circle at the pointer. Uses destination-out
+     to punch the hole, mirroring the deck spotlight's soft radial cut. */
+  drawSpotlightMirror(p) {
+    const ctx = this.overlayCtx;
+    const shell = this.el.toolShell;
+    if (!ctx || !shell) return;
+    const r = shell.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    this.clearOverlay();
+    ctx.save();
+    ctx.fillStyle = SPOTLIGHT_VEIL;
+    ctx.fillRect(0, 0, r.width, r.height); // CSS px (ctx carries the DPR transform)
+    const rOuter = SPOTLIGHT_RADIUS * p.scale;
+    const g = ctx.createRadialGradient(p.x, p.y, rOuter * 0.55, p.x, p.y, rOuter);
+    g.addColorStop(0, "rgba(0,0,0,1)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, rOuter, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
   }
 

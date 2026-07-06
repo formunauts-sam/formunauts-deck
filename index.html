@@ -12,6 +12,8 @@
   <link rel="stylesheet" href="dist/reveal.css" />
   <link rel="stylesheet" href="template/brand.css" />
   <link rel="stylesheet" href="template/deck.css" />
+  <!-- Shared front-of-house nav (the "Library" pill back to the hub) -->
+  <link rel="stylesheet" href="template/nav.css" />
   <link rel="stylesheet" href="plugin/customcontrols/style.css" />
   <link rel="stylesheet" href="plugin/marker/marker.css" />
   <link rel="stylesheet" href="template/interactive.css" />
@@ -39,6 +41,7 @@
     import { initAnim } from "./template/anim.js";
     import { initInteractive } from "./template/interactive.js";
     import { initDeckLink } from "./template/presenter/deck-link.js";
+    import { initDeckNav } from "./template/nav.js";
     import { initCollab } from "./template/collab.js";
     import { initHud } from "./template/engage/hud.js";
     import { ACTIVE_DECK } from "./decks/manifest.js";
@@ -106,6 +109,10 @@
     // authority. Room derives from opts.room || deck.meta.room || deck id,
     // so it is joinable locally out of the box. Skip on peek thumbnails.
     if (!peek) {
+      // Front-of-house: the discoverable "Library" pill back to hub.html.
+      // Rendered only on the real deck (never in presenter peek thumbnails);
+      // nav.css also hides it under fullscreen / print so it never projects.
+      initDeckNav();
       const engage = initCollab(Reveal, { deck, deckId: safe });
       // Wave 4: poll-archetype auto-open + on-deck result bars + reaction
       // ticker, riding the SAME authority transport the host created.
