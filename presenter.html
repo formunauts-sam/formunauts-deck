@@ -99,11 +99,45 @@
       <!-- RIGHT: speaker notes (big, scrollable) -->
       <section class="pv-notes-col" aria-label="Speaker notes">
         <div class="pv-notes-head">
-          <p class="pv-eyebrow" id="pv-eyebrow"></p>
+          <div class="pv-notes-head__row">
+            <p class="pv-eyebrow" id="pv-eyebrow"></p>
+            <!-- Prep affordances: quiet, off to the side, never on the live path -->
+            <div class="pv-notes-actions">
+              <span class="pv-edited-flag" id="pv-edited-flag" hidden
+                    title="These notes have a saved override">edited</span>
+              <button class="pv-note-btn" type="button" id="pv-notes-edit"
+                      title="Edit these speaker notes (E)">Edit notes</button>
+              <button class="pv-note-btn" type="button" id="pv-notes-export"
+                      title="Copy all overrides for this deck as JSON">Export notes</button>
+              <button class="pv-note-btn pv-note-btn--ghost" type="button" id="pv-notes-clear"
+                      title="Clear all saved note overrides for this deck">Clear overrides</button>
+            </div>
+          </div>
           <h1 class="pv-title" id="pv-title">Waiting for the deck…</h1>
         </div>
+
+        <!-- READ view: safe plain-text paragraphs. -->
         <div class="pv-notes" id="pv-notes" tabindex="0">
           <p class="pv-note-empty">Open the deck window to sync speaker notes.</p>
+        </div>
+
+        <!-- EDIT view: raw textarea + Save/Cancel. Hidden until armed. Only
+             ONE of pv-notes / pv-notes-editor is visible at a time. -->
+        <div class="pv-notes-editor" id="pv-notes-editor" hidden>
+          <label class="pv-editor-label" for="pv-notes-input">
+            Editing speaker notes
+            <span class="pv-editor-hint">Prep only. Live navigation and the timer keep running.</span>
+          </label>
+          <textarea class="pv-editor-field" id="pv-notes-input"
+                    spellcheck="true" autocomplete="off"
+                    placeholder="Add speaker notes for this slide…"></textarea>
+          <div class="pv-editor-bar">
+            <span class="pv-editor-status" id="pv-editor-status" role="status"></span>
+            <div class="pv-editor-btns">
+              <button class="pv-note-btn" type="button" id="pv-notes-cancel">Cancel</button>
+              <button class="pv-note-btn pv-note-btn--primary" type="button" id="pv-notes-save">Save</button>
+            </div>
+          </div>
         </div>
       </section>
     </main>

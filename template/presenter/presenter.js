@@ -31,6 +31,14 @@
    ============================================================ */
 
 import { ACTIVE_DECK } from "../../decks/manifest.js";
+import {
+  getNote,
+  setNote,
+  clearNote,
+  listOverrides,
+  clearDeck,
+  isStorageAvailable,
+} from "./notes-store.js";
 
 /* ---- Protocol constants (kept in lock-step with the deck side) ---- */
 const CHANNEL = "fmnts-deck";
@@ -177,10 +185,18 @@ function readSnapshot() {
    titles when NO live deck is publishing (standalone open, or the
    deck window closed). Loaded lazily, same-origin, never fatal.
 -------------------------------------------------------------- */
-async function loadDeckData() {
+/* The resolved deck id for THIS console: ?deck= value (validated) or the
+   active deck. This is the SAME id notes overrides are keyed under, so the
+   store, the previews and the deck-data fallback never disagree about which
+   deck they are looking at. */
+function resolveDeckId() {
   const wanted =
     new URLSearchParams(location.search).get("deck") || DEFAULT_DECK;
-  const safe = /^[0-9A-Za-z._-]+$/.test(wanted) ? wanted : DEFAULT_DECK;
+  return /^[0-9A-Za-z._-]+$/.test(wanted) ? wanted : DEFAULT_DECK;
+}
+
+async function loadDeckData() {
+  const safe = resolveDeckId();
   try {
     const mod = await import(`../../decks/${safe}.deck.js`);
     return mod.deck || null;
@@ -229,6 +245,16 @@ class Presenter {
       nextLabel: $("#pv-next-label"),
       notes: $("#pv-notes"),
       status: $("#pv-status"),
+      /* Notes editing (prep) */
+      editedFlag: $("#pv-edited-flag"),
+      btnEdit: $("#pv-notes-edit"),
+      btnExport: $("#pv-notes-export"),
+      btnClearOverrides: $("#pv-notes-clear"),
+      editor: $("#pv-notes-editor"),
+      editorField: $("#pv-notes-input"),
+      editorStatus: $("#pv-editor-status"),
+      btnSave: $("#pv-notes-save"),
+      btnCancel: $("#pv-notes-cancel"),
       jumpList: $("#pv-jump-list"),
       jumpPanel: $("#pv-jump"),
       btnPrev: $("#pv-prev"),
@@ -261,6 +287,13 @@ class Presenter {
 
     /* Deck data (fallback source for titles/notes/jump list). */
     this.deckData = null;
+
+    /* Notes overrides. deckId is the SAME id the store keys under; the slide
+       id comes from the deck data at the live index. `editing` gates the
+       editor so it never fights live navigation or the timer. */
+    this.deckId = resolveDeckId();
+    this.editing = false;
+    this.editingSlideId = null; // which slide the open editor belongs to
 
     /* Timer: elapsed since first slide interaction; per-slide rolling. */
     this.startedAt = null; // ms when the presentation timer started
@@ -404,6 +437,43 @@ class Presenter {
     if (!this.state.eyebrow && slide.eyebrow) this.state.eyebrow = slide.eyebrow;
   }
 
+  /* The stable id of the slide currently shown, resolved from deck data at
+     the live index. Notes overrides key on THIS (not the volatile index), so a
+     saved override follows its slide even if the deck is reordered. Returns
+     null when we can't identify the slide (no deck data) — the store is then
+     skipped and deck-file notes show, exactly as before. */
+  currentSlideId() {
+    const slide = this.deckData?.slides?.[this.state.index];
+    const id = slide && slide.id;
+    return typeof id === "string" && id ? id : null;
+  }
+
+  /* The EFFECTIVE notes for the current slide: a saved override wins, else the
+     notes carried by state (live broadcast OR standalone deck data). This is
+     the single choke point both paths flow through, so an override applies
+     whether the notes came over the channel or from the deck file. Returns
+     RAW text; callers escape on display. */
+  effectiveNotes() {
+    const slideId = this.currentSlideId();
+    if (slideId) {
+      const override = getNote(this.deckId, slideId);
+      // A saved override is RAW plain text the presenter typed. Return it
+      // VERBATIM so literal angle brackets ("revenue > cost", "<config>") and
+      // ampersands survive — never run tag-stripping on it. ("" is a real
+      // override meaning "intentionally no notes".)
+      if (override != null) return override;
+    }
+    // Deck-sourced notes are real HTML (the <aside class="notes"> innerHTML),
+    // so normalize THOSE to plain text here — the one and only place it happens.
+    return this.notesToText(this.state.notes || "");
+  }
+
+  /* True when the current slide carries a saved override (drives the flag). */
+  currentHasOverride() {
+    const slideId = this.currentSlideId();
+    return slideId != null && getNote(this.deckId, slideId) != null;
+  }
+
   /* Seed the console purely from deck data when there is no snapshot yet. */
   hydrateFromDeckData() {
     if (!this.deckData?.slides?.length) return;
@@ -477,12 +547,22 @@ class Presenter {
     if (this.el.eyebrow) this.el.eyebrow.textContent = s.eyebrow || "";
     if (this.el.title) this.el.title.textContent = s.title || "";
 
+    /* If the active slide changed out from under an open editor (live nav,
+       jump, remote deck move), close it WITHOUT saving — editing must never
+       trap the presenter on a stale slide. */
+    if (this.editing && this.editingSlideId !== this.currentSlideId()) {
+      this.closeEditor();
+    }
+
     /* Notes — rendered as plain text, injection-proof. The deck sends the
        innerHTML of its own <aside class="notes"> (already esc()'d, so it is
        entity-escaped plain text); the standalone fallback sends a raw data
-       string. Either way we normalize to text and build <p> nodes with
-       textContent, so no markup from data can ever execute here. */
-    if (this.el.notes) this.renderNotes(s.notes || "");
+       string. A saved override wins over either. Either way we normalize to
+       text and build <p> nodes with textContent, so no markup from data can
+       ever execute here. While the editor is open we leave the read view
+       untouched (the editor owns the panel). */
+    if (this.el.notes && !this.editing) this.renderNotes(this.effectiveNotes());
+    this.renderEditedFlag();
 
     /* Preview iframes — only reload when the target slide changed. */
     this.updatePreviews();
@@ -495,16 +575,19 @@ class Presenter {
     this.tick(); // refresh pacing immediately
   }
 
-  /* Paint the speaker notes as safe plain-text paragraphs. */
+  /* Paint the speaker notes as safe plain-text paragraphs. The input is
+     ALREADY display-ready plain text (effectiveNotes normalized deck HTML and
+     returns overrides verbatim), so we never tag-strip here — that would eat a
+     presenter's literal angle brackets. */
   renderNotes(raw) {
     const box = this.el.notes;
     box.textContent = ""; // clear
-    const text = this.notesToText(raw).trim();
+    const text = String(raw == null ? "" : raw).trim();
     if (!text) {
-      const p = document.createElement("p");
-      p.className = "pv-note-empty";
-      p.textContent = "No speaker notes for this slide.";
-      box.appendChild(p);
+      /* No effective notes → an obvious add-notes invitation, not a dead end.
+         Only offer the button when storage is usable AND we can identify the
+         slide (else the override could not be saved anyway). */
+      box.appendChild(this.buildEmptyState());
       box.scrollTop = 0;
       return;
     }
@@ -521,6 +604,230 @@ class Presenter {
       box.appendChild(p);
     }
     box.scrollTop = 0;
+  }
+
+  /* Build the add-notes empty state. When editing is possible it invites the
+     presenter to add notes; otherwise it degrades to the plain read-only line
+     (e.g. private mode, or a slide we can't identify to key an override). */
+  buildEmptyState() {
+    const canEdit = isStorageAvailable() && this.currentSlideId() != null;
+    if (!canEdit) {
+      const p = document.createElement("p");
+      p.className = "pv-note-empty";
+      p.textContent = "No speaker notes for this slide.";
+      return p;
+    }
+    const wrap = document.createElement("div");
+    wrap.className = "pv-note-addcta";
+
+    const text = document.createElement("p");
+    text.className = "pv-note-addcta__text";
+    const lead = document.createElement("span");
+    lead.className = "pv-note-addcta__lead";
+    lead.textContent = "No notes yet";
+    text.appendChild(lead);
+    text.appendChild(
+      document.createTextNode(
+        "Jot down what you want to say on this slide. Saved on this device."
+      )
+    );
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pv-note-addcta__btn";
+    btn.textContent = "Add notes for this slide";
+    btn.addEventListener("click", () => this.openEditor());
+
+    wrap.appendChild(text);
+    wrap.appendChild(btn);
+    return wrap;
+  }
+
+  /* Reflect whether the current slide has a saved override: show the "edited"
+     flag and keep the Edit trigger available. Cheap; called every render. */
+  renderEditedFlag() {
+    const flag = this.el.editedFlag;
+    if (!flag) return;
+    const on = this.currentHasOverride();
+    flag.hidden = !on;
+    /* Hide the Edit trigger entirely when there is no way to persist edits, so
+       we never offer an action that silently no-ops. */
+    if (this.el.btnEdit) {
+      const canEdit = isStorageAvailable() && this.currentSlideId() != null;
+      this.el.btnEdit.hidden = !canEdit;
+    }
+  }
+
+  /* ---- Notes editor (prep) ----
+     Editing is a PREP activity: it swaps the read panel for a raw textarea but
+     leaves navigation, the timer and previews fully live. Save/Cancel/Escape
+     all return to the read view. */
+  openEditor() {
+    const slideId = this.currentSlideId();
+    if (!slideId || !isStorageAvailable()) return; // nothing we could persist
+    if (this.editing) return;
+    this.editing = true;
+    this.editingSlideId = slideId;
+
+    /* Seed the field with the EFFECTIVE notes (override if any, else the deck
+       notes as plain text). effectiveNotes already returns display-ready text,
+       so we do NOT tag-strip again (that would corrupt typed angle brackets). */
+    if (this.el.editorField) this.el.editorField.value = this.effectiveNotes();
+    this.setEditorStatus("");
+
+    if (this.el.notes) this.el.notes.hidden = true;
+    if (this.el.editor) this.el.editor.hidden = false;
+    if (this.el.btnEdit) this.el.btnEdit.classList.add("is-active");
+
+    /* Focus the field for immediate typing; place the caret at the end. */
+    const f = this.el.editorField;
+    if (f) {
+      f.focus();
+      const len = f.value.length;
+      try {
+        f.setSelectionRange(len, len);
+      } catch {
+        /* ignore (unsupported) */
+      }
+    }
+  }
+
+  /* Close the editor and return to the read view. Never saves. */
+  closeEditor() {
+    this.editing = false;
+    this.editingSlideId = null;
+    if (this.el.editor) this.el.editor.hidden = true;
+    if (this.el.notes) this.el.notes.hidden = false;
+    if (this.el.btnEdit) this.el.btnEdit.classList.remove("is-active");
+    /* Repaint the read view from the (possibly just-saved) effective notes. */
+    if (this.el.notes) this.renderNotes(this.effectiveNotes());
+    this.renderEditedFlag();
+  }
+
+  /* Persist the textarea as this slide's override, then return to reading.
+     Saving the field verbatim (raw text) — display escaping happens on paint. */
+  saveEditor() {
+    if (!this.editing) return;
+    const slideId = this.editingSlideId;
+    if (!slideId) {
+      this.closeEditor();
+      return;
+    }
+    const text = this.el.editorField ? this.el.editorField.value : "";
+    const ok = setNote(this.deckId, slideId, text);
+    if (!ok) {
+      /* Storage refused (quota / private mode) — keep the editor open so the
+         presenter doesn't lose what they typed, and say why. */
+      this.setEditorStatus("Could not save on this device.", "warn");
+      return;
+    }
+    this.closeEditor();
+  }
+
+  setEditorStatus(text, state) {
+    const el = this.el.editorStatus;
+    if (!el) return;
+    el.textContent = text || "";
+    if (state) el.dataset.state = state;
+    else delete el.dataset.state;
+  }
+
+  /* ---- Export / clear overrides ----
+     Export copies EVERY override for this deck as a JSON object
+     { "<slideId>": "<notes text>", ... } — the exact shape Claude Code folds
+     back into decks/<deckId>.deck.js. Clipboard with a visible confirmation;
+     falls back to a textarea-select copy when the async clipboard is blocked. */
+  async exportOverrides() {
+    const btn = this.el.btnExport;
+    const overrides = listOverrides(this.deckId);
+    const count = Object.keys(overrides).length;
+    if (!count) {
+      this.flashButton(btn, "No overrides to export");
+      return;
+    }
+    const json = JSON.stringify(overrides, null, 2);
+    const copied = await this.copyText(json);
+    if (copied) {
+      this.flashButton(btn, `Copied ${count} override${count === 1 ? "" : "s"}`);
+      console.info(
+        `[presenter] Copied ${count} notes override(s) for deck "${this.deckId}". ` +
+          `Hand this JSON to Claude Code to merge into decks/${this.deckId}.deck.js ` +
+          `(match each key to the slide's id and update its notes):\n` +
+          json
+      );
+    } else {
+      /* Last resort: drop it in the console so it is never lost. */
+      this.flashButton(btn, "Copy blocked, see console");
+      console.info(
+        `[presenter] Notes overrides for deck "${this.deckId}" ` +
+          `(merge into decks/${this.deckId}.deck.js):\n` +
+          json
+      );
+    }
+  }
+
+  /* Copy text via the async Clipboard API, falling back to a hidden-textarea
+     execCommand copy for browsers/contexts that block it. */
+  async copyText(text) {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch {
+      /* fall through to the legacy path */
+    }
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.top = "-1000px";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+
+  /* Momentary label swap on a button (its own visible confirmation), then
+     restore its original text. Each button caches its own resting label +
+     timer on its dataset, so Export and Clear confirmations never clobber
+     each other and rapid clicks don't stack timers. */
+  flashButton(btn, label) {
+    if (!btn) return;
+    if (!btn.dataset.rest) btn.dataset.rest = btn.textContent;
+    btn.textContent = label;
+    if (btn._flashTimer) clearTimeout(btn._flashTimer);
+    btn._flashTimer = setTimeout(() => {
+      btn.textContent = btn.dataset.rest || "";
+      btn._flashTimer = null;
+    }, 1600);
+  }
+
+  /* Escape hatch: wipe every override for this deck (with a confirm), then
+     repaint so the panel falls back to the deck-file notes immediately. */
+  clearDeckOverrides() {
+    const btn = this.el.btnClearOverrides;
+    const count = Object.keys(listOverrides(this.deckId)).length;
+    if (!count) {
+      this.flashButton(btn, "No overrides to clear");
+      return;
+    }
+    const ok = window.confirm(
+      `Clear ${count} saved notes override${count === 1 ? "" : "s"} for this deck? ` +
+        `This reverts to the deck file's notes and cannot be undone.`
+    );
+    if (!ok) return;
+    if (this.editing) this.closeEditor();
+    clearDeck(this.deckId);
+    if (this.el.notes) this.renderNotes(this.effectiveNotes());
+    this.renderEditedFlag();
+    this.flashButton(btn, "Overrides cleared");
   }
 
   /* Normalize notes to plain text regardless of source, WITHOUT ever parsing
@@ -818,6 +1125,34 @@ class Presenter {
     this.el.btnReset?.addEventListener("click", () => this.resetTimer());
     this.el.btnReconnect?.addEventListener("click", () => this.reconnect());
 
+    /* Notes editing (prep). These never send anything to the deck. */
+    this.el.btnEdit?.addEventListener("click", () => this.openEditor());
+    this.el.btnSave?.addEventListener("click", () => this.saveEditor());
+    this.el.btnCancel?.addEventListener("click", () => this.closeEditor());
+    this.el.btnExport?.addEventListener("click", () => this.exportOverrides());
+    this.el.btnClearOverrides?.addEventListener("click", () =>
+      this.clearDeckOverrides()
+    );
+    /* Storage availability is a fixed property of the browser context, so gate
+       the deck-level prep buttons once. Per-slide Edit visibility is handled in
+       renderEditedFlag (it also needs a resolvable slide id). */
+    if (!isStorageAvailable()) {
+      if (this.el.btnExport) this.el.btnExport.hidden = true;
+      if (this.el.btnClearOverrides) this.el.btnClearOverrides.hidden = true;
+      if (this.el.btnEdit) this.el.btnEdit.hidden = true;
+    }
+    /* Cmd/Ctrl+Enter saves from inside the textarea; Escape cancels. Scoped to
+       the field so it does not shadow the global nav keys elsewhere. */
+    this.el.editorField?.addEventListener("keydown", (ev) => {
+      if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") {
+        ev.preventDefault();
+        this.saveEditor();
+      } else if (ev.key === "Escape") {
+        ev.preventDefault();
+        this.closeEditor();
+      }
+    });
+
     /* The "Open deck" affordance in the banner opens the shared deck in a
        new tab (user gesture → never popup-blocked). Resolve the URL relative
        to THIS document via new URL() (no brittle "../.." paths). */
@@ -896,6 +1231,11 @@ class Presenter {
         case "C":
           ev.preventDefault();
           this.clearAnnotations();
+          break;
+        case "e":
+        case "E":
+          ev.preventDefault();
+          this.openEditor();
           break;
         case "Escape":
           this.closeJump();

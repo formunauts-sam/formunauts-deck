@@ -439,6 +439,9 @@ body.is-blank .pv-blank-veil {
 }
 
 /* ---- Notes column (right) ---- */
+/* Head sits above a single body cell; the read view and the edit view both
+   occupy that second row and toggle via [hidden], so switching modes never
+   reflows the column. */
 .pv-notes-col {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -453,6 +456,103 @@ body.is-blank .pv-blank-veil {
   padding: 18px 24px 14px;
   border-bottom: 1px solid var(--pv-line-soft);
   background: rgba(0, 116, 200, 0.06);
+}
+.pv-notes-head__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 15px;
+  margin-bottom: 8px;
+}
+/* The eyebrow keeps its own bottom margin elsewhere; inside the row the flex
+   gap handles spacing, so drop it to keep the actions vertically aligned. */
+.pv-notes-head__row .pv-eyebrow {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Prep affordances cluster — quiet until hovered/focused. */
+.pv-notes-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.pv-edited-flag {
+  font-family: var(--font-body);
+  font-size: var(--overline-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--pv-accent-lift);
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 116, 200, 0.16);
+  border: 1px solid rgba(43, 147, 218, 0.4);
+  white-space: nowrap;
+}
+
+.pv-note-btn {
+  appearance: none;
+  height: 30px;
+  padding: 0 13px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--pv-line);
+  background: transparent;
+  color: var(--pv-ink-dim);
+  font-family: var(--font-body);
+  font-size: var(--body-sm);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--duration-fast) var(--ease-out-expo),
+    color var(--duration-fast) var(--ease-out-expo),
+    border-color var(--duration-fast) var(--ease-out-expo),
+    box-shadow var(--duration-fast) var(--ease-out-expo),
+    transform var(--duration-fast) var(--ease-out-expo);
+}
+.pv-note-btn:hover {
+  background: rgba(0, 116, 200, 0.14);
+  color: var(--pv-ink);
+  border-color: rgba(128, 185, 227, 0.3);
+}
+.pv-note-btn:active {
+  transform: scale(0.97);
+}
+.pv-note-btn:focus-visible {
+  outline: none;
+  border-color: var(--pv-accent);
+  box-shadow: 0 0 0 3px rgba(0, 116, 200, 0.4);
+}
+.pv-note-btn--primary {
+  background: linear-gradient(180deg, var(--pv-accent-lift), var(--pv-accent));
+  border-color: transparent;
+  color: var(--fg-on-primary);
+  box-shadow: 0 4px 12px -5px rgba(0, 116, 200, 0.7);
+}
+.pv-note-btn--primary:hover {
+  background: linear-gradient(180deg, #3aa0e4, #0a7fd0);
+  color: var(--fg-on-primary);
+}
+/* Editing mode: the trigger reads as active while the editor is open. */
+.pv-note-btn.is-active {
+  background: rgba(0, 116, 200, 0.2);
+  color: var(--pv-ink);
+  border-color: rgba(43, 147, 218, 0.5);
+}
+/* Ghost variant for the destructive Clear action: quieter until hovered, when
+   it warms to the stopper red so its consequence reads clearly. */
+.pv-note-btn--ghost {
+  border-color: transparent;
+  color: var(--pv-ink-faint);
+}
+.pv-note-btn--ghost:hover {
+  background: rgba(224, 59, 80, 0.14);
+  color: var(--pv-ink);
+  border-color: var(--fmnts-secondary-50);
 }
 .pv-eyebrow {
   margin: 0 0 8px;
@@ -475,6 +575,14 @@ body.is-blank .pv-blank-veil {
   line-height: 1.18;
   letter-spacing: -0.01em;
   color: var(--pv-ink);
+}
+
+/* Both the read view and the editor live in the SAME body row (row 2), so
+   toggling [hidden] swaps them in place without adding an implicit grid row. */
+.pv-notes,
+.pv-notes-editor {
+  grid-row: 2;
+  grid-column: 1;
 }
 
 /* The big scrollable speaker text — the heart of the console. */
@@ -504,6 +612,152 @@ body.is-blank .pv-blank-veil {
   font-size: var(--body-md);
   font-style: italic;
   color: var(--pv-ink-faint);
+}
+
+/* Add-notes empty state — an obvious invitation, not a dead end. Shown when a
+   slide has no effective notes at all, so notes can be ADDED (not just edited). */
+.pv-note-addcta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  margin: 6px 0 0;
+  padding: 22px;
+  border: 1px dashed rgba(128, 185, 227, 0.34);
+  border-radius: var(--pv-radius-sm);
+  background: rgba(0, 116, 200, 0.05);
+}
+.pv-note-addcta__text {
+  margin: 0;
+  font-size: var(--body-md);
+  line-height: 1.5;
+  color: var(--pv-ink-dim);
+}
+.pv-note-addcta__lead {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 19px;
+  color: var(--pv-ink);
+  margin-bottom: 4px;
+}
+.pv-note-addcta__btn {
+  appearance: none;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  background: linear-gradient(180deg, var(--pv-accent-lift), var(--pv-accent));
+  color: var(--fg-on-primary);
+  font-family: var(--font-body);
+  font-size: var(--body-md);
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 5px 14px -6px rgba(0, 116, 200, 0.7);
+  transition: transform var(--duration-fast) var(--ease-out-expo),
+    background var(--duration-fast) var(--ease-out-expo),
+    box-shadow var(--duration-fast) var(--ease-out-expo);
+}
+.pv-note-addcta__btn:hover {
+  background: linear-gradient(180deg, #3aa0e4, #0a7fd0);
+  transform: translateY(-1px);
+}
+.pv-note-addcta__btn:active {
+  transform: translateY(0);
+}
+.pv-note-addcta__btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 116, 200, 0.45);
+}
+
+/* ---- Notes editor (prep only) ---- */
+/* Fills the same body row as the read view; internal grid keeps the textarea
+   flexible with a fixed action bar pinned at the bottom. */
+.pv-notes-editor {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  min-height: 0;
+  padding: 18px 24px 20px;
+}
+.pv-notes-editor[hidden] {
+  display: none;
+}
+.pv-editor-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-body);
+  font-size: var(--overline);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--pv-ink-faint);
+}
+.pv-editor-hint {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  font-size: var(--body-sm);
+  color: var(--pv-ink-faint);
+}
+.pv-editor-field {
+  width: 100%;
+  min-height: 0;
+  resize: none;
+  padding: 16px 18px;
+  border-radius: var(--pv-radius-sm);
+  border: 1px solid var(--pv-line);
+  background: rgba(4, 16, 26, 0.6);
+  color: rgba(234, 242, 249, 0.96);
+  font-family: var(--font-body);
+  font-size: 19px;
+  line-height: 1.6;
+  letter-spacing: 0.002em;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(128, 185, 227, 0.28) transparent;
+  transition: border-color var(--duration-fast) var(--ease-out-expo),
+    box-shadow var(--duration-fast) var(--ease-out-expo);
+}
+.pv-editor-field::placeholder {
+  color: var(--pv-ink-faint);
+}
+.pv-editor-field:focus {
+  outline: none;
+  border-color: var(--pv-accent);
+  box-shadow: 0 0 0 3px rgba(0, 116, 200, 0.28);
+}
+.pv-editor-field::-webkit-scrollbar {
+  width: 10px;
+}
+.pv-editor-field::-webkit-scrollbar-thumb {
+  background: rgba(128, 185, 227, 0.24);
+  border-radius: var(--radius-pill);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.pv-editor-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pv-editor-status {
+  font-size: var(--body-sm);
+  color: var(--pv-ink-dim);
+  min-height: 1em;
+}
+.pv-editor-status[data-state="ok"] {
+  color: var(--success-500);
+}
+.pv-editor-status[data-state="warn"] {
+  color: var(--fmnts-secondary);
+}
+.pv-editor-btns {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
 }
 
 /* Custom scrollbar (brand, subtle) */
