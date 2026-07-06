@@ -106,7 +106,8 @@
         "archetype": {
           "enum": [
             "cover", "overviewBullets", "campaignAnalysis", "projectVisual",
-            "processDiagram", "nextSteps", "closing", "bentoBoard", "statusBoard"
+            "processDiagram", "nextSteps", "closing", "bentoBoard", "statusBoard",
+            "poll"
           ],
           "description": "Which renderer builds the slide body."
         },
@@ -489,6 +490,34 @@
                         }
                       }
                     }
+                  }
+                }
+              }
+            }
+          }
+        },
+
+        {
+          "if": { "properties": { "archetype": { "const": "poll" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "description": "Engage-native poll slide. Poses a question and options on-brand; reaching it auto-opens the poll to viewers, and live votes fill each option's result bar. The option id is the vote token the authority tallies.",
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "question": { "type": "string", "description": "The poll prompt shown on the slide (falls back to headline when absent)." },
+              "options": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 6,
+                "description": "The poll options (2..6). Each needs a stable ASCII id (the vote token) and a display label.",
+                "items": {
+                  "type": "object",
+                  "required": ["id", "label"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": { "type": "string", "pattern": "^[0-9A-Za-z._-]+$", "description": "Stable ASCII option id; becomes the vote token the authority tallies." },
+                    "label": { "type": "string", "minLength": 1, "description": "What the audience reads for this option." }
                   }
                 }
               }

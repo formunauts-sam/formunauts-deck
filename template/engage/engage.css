@@ -1,0 +1,379 @@
+/* ============================================================
+   engage/engage.css — WAVE 4 ENGAGE UI (CHROME). Tokens only.
+   ------------------------------------------------------------
+   Three surfaces, one stylesheet:
+     §1 Viewer thumb zone (.tz-*)  — mobile-first, one-thumb. The
+        reaction bar, raise-hand, Ask + upvoted Q&A, poll sheet, and
+        the flying-reaction layer that floats over the mirrored stage.
+     §2 Poll archetype (.poll-board / .poll-opt) — the on-brand poll
+        SLIDE the deck renders; live result bars fill via scaleX.
+     §3 Deck-side HUD extras (.hud-ticker + collab Q&A answered state).
+
+   Rules honoured throughout:
+     · brand tokens only (--fmnts-*, --blue-*, --radius-*, --elevation-*,
+       --ease-orbit, --dur-*); never a raw hex.
+     · motion is transform/opacity ONLY (compositor-safe).
+     · red (#E03B50 / --fmnts-secondary) is the rare stopper: used at
+       most once per surface (the single poll leader accent).
+     · NO emoji; reactions/icons are on-brand inline SVG (glyphs.js).
+     · every animated element resolves to a fully-composed static state
+       under print-pdf, is-peek, and prefers-reduced-motion (see the end).
+   ============================================================ */
+
+/* ==========================================================================
+   §1  VIEWER THUMB ZONE (viewer.html #vw-thumb -> .tz-root)
+   ========================================================================== */
+.tz-root {
+  /* the static viewer.html sizes #vw-thumb; we lay the controls out in it */
+  display: block;
+  min-height: 0;
+  padding-top: 6px;
+}
+.tz-root, .tz-root * { box-sizing: border-box; }
+.tz-root button { font-family: inherit; cursor: pointer; }
+
+/* the action bar: reactions on the left, hand + ask on the right */
+.tz-bar {
+  display: flex; align-items: center; gap: var(--space-3);
+  justify-content: space-between;
+}
+
+/* ---- reaction bar ---- */
+.tz-reactbar {
+  display: inline-flex; gap: var(--space-1);
+  padding: 4px; border-radius: var(--radius-pill);
+  background: var(--blue-50);
+}
+.tz-reactbar button {
+  width: 44px; height: 44px; padding: 9px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; border-radius: var(--radius-pill);
+  background: transparent; color: var(--fmnts-primary);
+  transition: transform var(--dur-fast) var(--ease-orbit),
+              background var(--dur-fast) var(--ease-orbit);
+}
+.tz-reactbar button svg { width: 24px; height: 24px; display: block; }
+.tz-reactbar button:active { transform: scale(.9); background: var(--blue-100); }
+.tz-reactbar button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--border-focus); }
+.tz-reactbar button.is-pop { animation: tz-pop var(--dur-normal) var(--ease-orbit); }
+@keyframes tz-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+/* ---- action buttons (raise hand + ask) ---- */
+.tz-actions { display: inline-flex; gap: var(--space-2); }
+.tz-actions button {
+  height: 44px; padding: 0 14px;
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--border-default); border-radius: var(--radius-pill);
+  background: var(--bg-surface); color: var(--fg-default);
+  font-size: var(--body-sm); font-weight: 600; white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease-orbit),
+              border-color var(--dur-fast) var(--ease-orbit),
+              transform var(--dur-fast) var(--ease-orbit);
+}
+.tz-actions button svg { width: 18px; height: 18px; color: var(--fmnts-primary); }
+.tz-actions button:active { transform: scale(.97); }
+.tz-actions button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--border-focus); }
+.tz-actions button.is-on {
+  background: var(--fmnts-primary); border-color: var(--fmnts-primary); color: var(--fg-on-primary);
+}
+.tz-actions button.is-on svg { color: var(--fg-on-primary); }
+.tz-hand__n {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1;
+  padding-left: 6px; margin-left: 2px; border-left: 1px solid rgba(255,255,255,.35);
+}
+.tz-hand:not(.is-on) .tz-hand__n { color: var(--fmnts-primary); border-left-color: var(--border-subtle); }
+
+/* ---- flying reactions (float over the mirrored stage) ---- */
+.tz-fly-layer {
+  position: absolute; inset: 0; z-index: 5;
+  overflow: hidden; pointer-events: none;
+}
+.tz-fly {
+  position: absolute; bottom: 8%;
+  width: 30px; height: 30px; color: var(--fmnts-primary);
+  will-change: transform, opacity;
+  animation: tz-float 2000ms var(--ease-orbit) forwards;
+}
+.tz-fly svg { width: 100%; height: 100%; display: block;
+  filter: drop-shadow(0 4px 10px rgba(0,116,200,.28)); }
+@keyframes tz-float {
+  0%   { opacity: 0; transform: translateY(0) scale(.5); }
+  14%  { opacity: 1; transform: translateY(-14px) scale(1); }
+  100% { opacity: 0; transform: translateY(-70%) scale(1.05); }
+}
+
+/* ---- bottom sheets (Ask + poll) ---- */
+.tz-sheet {
+  margin-top: var(--space-3);
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+}
+.tz-sheet[hidden] { display: none; }
+.tz-sheet__head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+.tz-sheet__title {
+  font-family: var(--font-display); font-weight: 600;
+  font-size: var(--h6); color: var(--fg-default);
+}
+.tz-sheet__close {
+  border: none; background: transparent; color: var(--fmnts-primary);
+  font-size: var(--body-sm); font-weight: 600; padding: 4px 6px;
+}
+
+/* ---- Ask: shared question list + composer ---- */
+.tz-qlist {
+  list-style: none; margin: 0 0 var(--space-3); padding: 0;
+  max-height: 34vh; overflow-y: auto;
+  display: flex; flex-direction: column; gap: var(--space-2);
+}
+.tz-qempty { font-size: var(--body-sm); color: var(--fg-subtle); font-style: italic; padding: 4px 0; }
+.tz-qitem {
+  display: flex; align-items: flex-start; gap: var(--space-2);
+  background: var(--blue-50); border-radius: var(--radius-md);
+  padding: 10px 10px 10px 12px;
+}
+.tz-qitem.is-mine {
+  background: var(--blue-100);
+  box-shadow: inset 3px 0 0 var(--fmnts-primary);
+}
+.tz-qitem__text {
+  flex: 1; font-size: var(--body-sm); line-height: var(--body-sm-lh);
+  color: var(--fg-default);
+}
+.tz-upvote {
+  flex: none; display: inline-flex; flex-direction: column; align-items: center;
+  gap: 2px; min-width: 40px; padding: 4px 6px;
+  border: 1px solid var(--border-default); border-radius: var(--radius-sm);
+  background: var(--bg-surface); color: var(--fmnts-primary);
+  font-size: var(--body-xs); font-weight: 600;
+  transition: border-color var(--dur-fast) var(--ease-orbit),
+              transform var(--dur-fast) var(--ease-orbit);
+}
+.tz-upvote svg { width: 15px; height: 15px; }
+.tz-upvote__n { font-family: var(--font-display); font-feature-settings: "tnum" 1; }
+.tz-upvote:not(:disabled):active { transform: scale(.94); }
+.tz-upvote:not(:disabled):focus-visible { outline: none; box-shadow: 0 0 0 3px var(--border-focus); }
+.tz-upvote.is-voted {
+  background: var(--fmnts-primary); border-color: var(--fmnts-primary); color: var(--fg-on-primary);
+  cursor: default;
+}
+
+.tz-composer { border-top: 1px solid var(--border-subtle); padding-top: var(--space-3); }
+.tz-ta {
+  width: 100%; resize: none;
+  border: 1px solid var(--border-default); border-radius: var(--radius-md);
+  padding: 10px 12px; font-family: inherit; font-size: var(--body-md);
+  color: var(--fg-default); background: var(--bg-surface);
+}
+.tz-ta:focus-visible { outline: none; border-color: var(--fmnts-primary); box-shadow: 0 0 0 3px var(--border-focus); }
+.tz-composer__row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: var(--space-2);
+}
+.tz-counter { font-size: var(--body-xs); color: var(--fg-subtle); font-feature-settings: "tnum" 1; }
+.tz-send {
+  border: none; border-radius: var(--radius-pill); padding: 8px 18px;
+  background: var(--fmnts-primary); color: var(--fg-on-primary);
+  font-weight: 600; font-size: var(--body-sm);
+  transition: background var(--dur-fast) var(--ease-orbit);
+}
+.tz-send:not(:disabled):hover { background: var(--fmnts-primary-mid); }
+.tz-send:disabled { background: var(--neutral-300); color: var(--fg-inverse); cursor: not-allowed; }
+
+/* ---- poll bottom-sheet ---- */
+.tz-poll { transform: translateY(6px); opacity: 0;
+  transition: opacity var(--dur-normal) var(--ease-orbit),
+              transform var(--dur-normal) var(--ease-orbit); }
+.tz-poll.is-open { transform: translateY(0); opacity: 1; }
+.tz-poll__live {
+  font-size: var(--overline); letter-spacing: .18em; text-transform: uppercase;
+  font-weight: 600; color: var(--fg-muted);
+}
+.tz-poll__live.is-live { color: var(--fmnts-primary); }
+.tz-poll__q {
+  font-size: var(--body-md); line-height: var(--body-md-lh); font-weight: 600;
+  color: var(--fg-default); margin: 0 0 var(--space-3);
+}
+.tz-opt {
+  position: relative; display: block; width: 100%; text-align: left;
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+  background: var(--bg-surface); color: var(--fg-default);
+  padding: 12px 14px; margin-bottom: var(--space-2); overflow: hidden;
+  font-size: var(--body-md);
+  transition: border-color var(--dur-fast) var(--ease-orbit),
+              background var(--dur-fast) var(--ease-orbit);
+}
+.tz-opt:last-of-type { margin-bottom: 0; }
+.tz-opt__fill {
+  position: absolute; inset: 0; z-index: 0;
+  transform-origin: left center; transform: scaleX(0);
+  background: var(--blue-100);
+  transition: transform var(--dur-slow) var(--ease-orbit);
+}
+.tz-opt__row {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.tz-opt__pct {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1;
+  color: var(--fmnts-primary); font-weight: 600;
+}
+.tz-opt:not(:disabled):active { background: var(--blue-50); }
+.tz-opt:not(:disabled):focus-visible { outline: none; border-color: var(--fmnts-primary); box-shadow: 0 0 0 3px var(--border-focus); }
+.tz-opt.is-mine { border-color: var(--fmnts-primary); }
+.tz-poll__foot {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: var(--space-3); font-size: var(--body-sm); color: var(--fg-muted);
+}
+
+/* ==========================================================================
+   §2  POLL ARCHETYPE — the on-brand poll SLIDE (archetypes/poll.js).
+   Scoped under the deck section like every archetype. Live votes fill each
+   option's result track (scaleX); one red stopper max on the leader.
+   ========================================================================== */
+.reveal .slides section[data-archetype="poll"] .poll-board {
+  display: flex; flex-direction: column; gap: var(--space-4);
+  height: 100%; min-height: 0;
+}
+.reveal .slides section .poll-board__head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--space-4);
+}
+.reveal .slides section .poll-board__status {
+  font-family: var(--font-body); font-weight: 600; text-transform: uppercase;
+  letter-spacing: .2em; font-size: var(--overline); color: var(--fmnts-primary);
+}
+.reveal .slides section .poll-board__total {
+  font-size: var(--body-md); color: var(--fg-muted);
+}
+.reveal .slides section .poll-board__total b {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1;
+  color: var(--fg-default); font-size: var(--h4);
+}
+.reveal .slides section .poll-board__q {
+  font-family: var(--font-display); font-weight: 600;
+  font-size: var(--h2); line-height: var(--h2-lh); color: var(--fg-default);
+  margin: 0;
+}
+.reveal .slides section .poll-board__opts {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: var(--space-3);
+}
+.reveal .slides section .poll-opt {
+  position: relative; overflow: hidden;
+  display: flex; align-items: stretch;
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-lg);
+  background: var(--bg-surface); box-shadow: var(--elevation-1);
+  min-height: 64px;
+}
+.reveal .slides section .poll-opt__index {
+  position: relative; z-index: 1; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 56px; font-family: var(--font-display); font-weight: 600;
+  font-size: var(--h4); color: var(--fmnts-primary);
+  border-right: 1px solid var(--border-subtle);
+}
+.reveal .slides section .poll-opt__fill {
+  position: absolute; inset: 0; z-index: 0;
+  transform-origin: left center; transform: scaleX(0);
+  background: var(--blue-100);
+  transition: transform var(--dur-count) var(--ease-orbit);
+}
+.reveal .slides section .poll-opt__row {
+  position: relative; z-index: 1; flex: 1;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-5);
+  padding: 0 var(--space-5);
+}
+.reveal .slides section .poll-opt__label {
+  font-size: var(--h4); line-height: var(--h4-lh); color: var(--fg-default);
+}
+.reveal .slides section .poll-opt__meta {
+  display: inline-flex; align-items: baseline; gap: var(--space-3); flex: none;
+}
+.reveal .slides section .poll-opt__count {
+  font-size: var(--body-sm); color: var(--fg-muted); font-feature-settings: "tnum" 1;
+}
+.reveal .slides section .poll-opt__pct {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1;
+  font-size: var(--h3); font-weight: 600; color: var(--fmnts-primary);
+}
+/* the single leader accent — the one sanctioned red stopper on this surface */
+.reveal .slides section .poll-opt.is-lead { border-color: var(--fmnts-secondary); }
+.reveal .slides section .poll-opt.is-lead .poll-opt__index,
+.reveal .slides section .poll-opt.is-lead .poll-opt__pct { color: var(--fmnts-secondary); }
+.reveal .slides section .poll-opt.is-lead .poll-opt__fill { background: var(--fmnts-secondary-25); }
+
+/* ==========================================================================
+   §3  DECK-SIDE HUD EXTRAS
+   ========================================================================== */
+/* reaction ticker (hud.js) — a small pulsing chip, bottom-center */
+.hud-ticker {
+  position: fixed; left: 50%; bottom: 70px; transform: translateX(-50%);
+  z-index: 56; pointer-events: none;
+  display: inline-flex; align-items: baseline; gap: 6px;
+  padding: 6px 14px; border-radius: var(--radius-pill);
+  background: var(--bg-surface); box-shadow: var(--elevation-3);
+  font-size: var(--body-sm); color: var(--fg-muted);
+}
+.hud-ticker__n {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1;
+  font-size: var(--h5); color: var(--fmnts-primary);
+}
+.hud-ticker.is-pulse { animation: hud-tick var(--dur-normal) var(--ease-orbit); }
+@keyframes hud-tick {
+  0% { transform: translateX(-50%) scale(1); }
+  40% { transform: translateX(-50%) scale(1.08); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+/* collab.js Q&A queue: sorted rows with an answered state + mark-answered */
+.fc-qa-item { display: flex; align-items: flex-start; gap: var(--space-2); }
+.fc-qa-text { flex: 1; }
+.fc-qa-meta { flex: none; display: inline-flex; align-items: center; gap: var(--space-2); }
+.fc-qa-votes {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1;
+  font-size: var(--body-xs); font-weight: 600; color: var(--fmnts-primary);
+}
+.fc-qa-answer {
+  border: 1px solid var(--border-default); border-radius: var(--radius-pill);
+  background: var(--bg-surface); color: var(--fg-muted);
+  font-size: var(--body-xs); font-weight: 600; padding: 3px 9px;
+  transition: border-color var(--dur-fast) var(--ease-orbit),
+              color var(--dur-fast) var(--ease-orbit);
+}
+.fc-qa-answer:hover { border-color: var(--fmnts-primary); color: var(--fmnts-primary); }
+.fc-qa-item.is-answered { opacity: .55; }
+.fc-qa-item.is-answered .fc-qa-answer {
+  background: var(--fmnts-primary); border-color: var(--fmnts-primary); color: var(--fg-on-primary);
+}
+
+/* never render Engage overlays in print/peek exports */
+body.print-pdf .hud-ticker, body.is-peek .hud-ticker { display: none !important; }
+
+/* ==========================================================================
+   §4  DEGRADATION GUARDS — flatten every effect to a fully-visible static
+   state under print-pdf, is-peek, and reduced-motion (mirrors deck.css).
+   The poll SLIDE bars sit at their host-set scaleX; with no host (a static
+   export) they read as an un-voted board, which is the correct static state.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .tz-reactbar button.is-pop,
+  .tz-poll,
+  .hud-ticker.is-pulse { animation: none !important; transition: none !important; }
+  .tz-fly { animation-duration: 1200ms; }
+  .tz-opt__fill,
+  .reveal .slides section .poll-opt__fill { transition: none !important; }
+}
+body.print-pdf .reveal .slides section .poll-opt__fill,
+body.is-peek .reveal .slides section .poll-opt__fill { transition: none !important; }
+/* the viewer thumb-zone chrome never appears in a deck print/peek export
+   (it only exists in viewer.html), so no extra gate is needed there. */

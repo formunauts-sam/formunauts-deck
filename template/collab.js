@@ -1,70 +1,59 @@
 /* ============================================================
-   collab.js — LIVE COLLABORATION client (CHROME)
+   collab.js — the DECK-SIDE ENGAGE HOST (CHROME)
    ------------------------------------------------------------
-   Optional audience layer over PartyKit. PURELY ADDITIVE:
+   Boots by default ON THE DECK:
 
      initCollab(Reveal, opts?)
 
-   No-ops (and the deck is byte-for-byte the static experience)
-   unless BOTH are true:
-     1. a PARTY host is configured  (opts.host, or <meta
-        name="party-host">, or window.PARTY_HOST, or ?party=)
-     2. a room is present           (?room=<id>)
+   The deck (index.html) tab is the AUTHORITY host. It:
+     · creates a local Transport (template/engage/transport.js),
+     · holds the canonical state via the authority reducer
+       (template/engage/authority.js),
+     · bridges reveal 'slidechanged' -> {t:'set-slide',h,v,id} so
+       every joined viewer follows,
+     · reduces inbound viewer messages (reactions, hands, questions,
+       poll votes, words) and re-broadcasts the resulting state,
+     · renders the on-brand flying-reaction layer + a presenter HUD.
 
-   URL params (read like index.html reads ?deck):
-     ?room=<id>                which session to join (required)
-     ?role=presenter|viewer    default viewer
-     ?t=<token>                presenter token (matched server-side)
-     ?party=<host>             optional PARTY host override
+   Engage runs on its OWN transport — BroadcastChannel('fmnts-engage:'
+   +roomId) — which is SEPARATE from the presenter console's
+   'fmnts-deck' channel (presenter/deck-link.js). The two never
+   collide. The deck is joinable locally out of the box: no special
+   URL params are required; a viewer surface (Wave 3) opens the same
+   origin with ?room=<id> and follows along.
+
+   URL params:
+     ?room=<id>                override the room (else derived below)
+     ?role=presenter|viewer    default presenter (deck tab is the host);
+                               a viewer surface passes viewer
+     ?engage=local|supabase|partykit   transport mode (default local;
+                               supabase/partykit stub to local until Wave 6)
      ?name=<label>             optional display name
 
-   Roles are SEPARATE and SERVER-ENFORCED:
-     · presenter  broadcasts the slide index + (reveal `q`) pointer,
-                  sees the HUD (presence · reactions · hands · Q&A ·
-                  poll tally), and can open/close a poll.
-     · viewer     follows the presenter's slide, votes in polls,
-                  raises a hand, asks questions, sends reactions.
+   Room id resolution (Wave 2 brief): opts.room || deck.meta.room ||
+   deck id. The deck host is always joinable locally.
 
-   Transport (DEFAULT): local BroadcastChannel — zero network, zero
-   CDN, works offline. The PartyKit transport is an ALTERNATE that
-   needs a vendored partysocket (vendor/partysocket.mjs — see
-   PLATFORM-V2-CONCEPT.md Wave 6); it is NOT bundled here, so if it is
-   ever selected it warns once and falls back to local. Either way
-   initCollab degrades to a silent no-op unless a room + host are set.
+   The PartyKit / esm.sh coupling is GONE: PartyKit is now just another
+   transport MODE behind template/engage/transport.js (Wave 6). There
+   is no CDN import in this file.
 
    Everything visual is injected into a single scoped <style> that
    references ONLY brand tokens (--fmnts-*, --blue-*, --radius-*,
    --elevation-*, --ease-out-expo). Motion is transform/opacity
    only. Reactions are on-brand inline-SVG glyphs (no emoji, no red).
    ============================================================ */
+import { makeTransport, STATUS } from "./engage/transport.js";
+import {
+  freshState,
+  reduce,
+  stateSnapshot,
+  setPresenceCount,
+  dropClient,
+} from "./engage/authority.js";
 
-/* ------------------------------------------------------------------
-   Config discovery — where is the PartyKit host?
-   Priority: explicit opts.host > ?party= > <meta party-host> >
-             window.PARTY_HOST. Absent → collab disabled.
------------------------------------------------------------------- */
-function resolveHost(opts) {
-  const q = new URLSearchParams(location.search);
-  const fromOpts = opts && typeof opts.host === "string" ? opts.host.trim() : "";
-  const fromQuery = (q.get("party") || "").trim();
-  const meta = document.querySelector('meta[name="party-host"]');
-  const fromMeta = meta ? (meta.getAttribute("content") || "").trim() : "";
-  const fromGlobal = typeof window.PARTY_HOST === "string" ? window.PARTY_HOST.trim() : "";
-  return fromOpts || fromQuery || fromMeta || fromGlobal || "";
-}
-
-/* Normalize a host into what partysocket wants: bare host[:port],
-   no scheme, no trailing slash. partysocket adds ws/wss itself. */
-function normalizeHost(raw) {
-  let h = raw.replace(/^wss?:\/\//i, "").replace(/^https?:\/\//i, "");
-  h = h.replace(/\/+$/, "");
-  return h;
-}
-
-/* Reaction kinds must match the server whitelist exactly. */
+/* Reaction kinds must match the authority whitelist exactly. */
 const REACTIONS = ["spark", "up", "clap", "eyes", "plus"];
 
-const PROTO = 1; // bump if the message vocabulary changes
 const MAX_FLYING = 40; // cap concurrent reaction nodes (perf)
 const POINTER_MIN_MS = 40; // throttle pointer broadcasts (~25/s)
 const AUTHOR_W = 1280; // deck canvas (matches Reveal config)
@@ -315,7 +304,10 @@ function injectStyles() {
     border-radius: var(--radius-lg); box-shadow: var(--elevation-4);
     padding: var(--space-4); pointer-events: auto;
     display: flex; flex-direction: column; gap: var(--space-3);
+    transition: width var(--duration-normal) var(--ease-out-expo);
   }
+  /* Collapsed = a compact pill sized to just the header, never covers the slide. */
+  .fc-hud.is-collapsed { width: auto; padding: 9px 14px; gap: 0; }
   .fc-hud__head {
     display: flex; justify-content: space-between; align-items: center;
     font-size: var(--overline); text-transform: uppercase; letter-spacing: .2em;
@@ -409,104 +401,130 @@ function readDeckTransform() {
   };
 }
 
+/* ------------------------------------------------------------------
+   Room id resolution (Wave 2 brief): opts.room || deck.meta.room ||
+   deck id. ?room= wins so a second-screen viewer can override. The
+   deck host is always joinable locally, so a room is ALWAYS resolved.
+------------------------------------------------------------------ */
+function resolveRoom(opts) {
+  let fromQuery = "";
+  try {
+    fromQuery = (new URLSearchParams(location.search).get("room") || "").trim();
+  } catch {
+    /* no location — fall through */
+  }
+  const fromOpts = opts && typeof opts.room === "string" ? opts.room.trim() : "";
+  const metaRoom =
+    opts && opts.deck && opts.deck.meta && typeof opts.deck.meta.room === "string"
+      ? opts.deck.meta.room.trim()
+      : "";
+  const deckId =
+    (opts && typeof opts.deckId === "string" && opts.deckId.trim()) ||
+    (opts && opts.deck && opts.deck.meta && typeof opts.deck.meta.id === "string"
+      ? opts.deck.meta.id.trim()
+      : "");
+  return fromQuery || fromOpts || metaRoom || deckId || "default";
+}
+
+/* A stable per-client id for this tab, persisted in sessionStorage so
+   a reload keeps the same identity (vote dedupe survives a refresh but
+   resets for a fresh viewer). */
+function ensureClientId() {
+  const key = "fmnts-engage-client";
+  try {
+    let id = sessionStorage.getItem(key);
+    if (!id) {
+      id = "c-" + Math.random().toString(36).slice(2, 10);
+      sessionStorage.setItem(key, id);
+    }
+    return id;
+  } catch {
+    return "c-" + Math.random().toString(36).slice(2, 10);
+  }
+}
+
 /* ==================================================================
    PUBLIC API
    ------------------------------------------------------------------
    initCollab(Reveal, opts?)
-     opts.host   optional PARTY host (else discovered from URL/meta)
-     opts.name   optional display name
-   Returns { enabled: boolean } and is safe to call unconditionally.
+     opts.deck    the loaded deck data (for deck.meta.room / .id)
+     opts.deckId  the resolved deck id (index.html already computes it)
+     opts.room    explicit room override
+     opts.name    optional display name
+   Boots the deck-side Engage HOST by default. Returns
+   { enabled, transport?, room? } and is safe to call unconditionally.
 ================================================================== */
 export function initCollab(Reveal, opts = {}) {
-  const q = new URLSearchParams(location.search);
-  const room = (q.get("room") || "").trim();
-  const host = normalizeHost(resolveHost(opts));
-
-  // --- graceful no-op: static deck must keep working untouched ---
-  if (!room || !host) return { enabled: false };
   if (!Reveal || typeof Reveal.on !== "function") return { enabled: false };
 
-  const role = q.get("role") === "presenter" ? "presenter" : "viewer";
-  const token = q.get("t") || "";
+  let q;
+  try {
+    q = new URLSearchParams(location.search);
+  } catch {
+    q = new URLSearchParams("");
+  }
+
+  // The deck (index.html) tab is the AUTHORITY host — presenter role.
+  // A viewer surface (Wave 3) opens the same origin with ?role=viewer.
+  const role = q.get("role") === "viewer" ? "viewer" : "presenter";
+  const mode = q.get("engage") || "local";
+  const room = resolveRoom(opts);
   const name = (opts.name || q.get("name") || "").trim();
+  const clientId = ensureClientId();
 
   injectStyles();
 
-  /* one root overlay for all collab chrome */
+  /* one root overlay for all engage chrome */
   const root = el("div", { class: "fc-root", "aria-live": "polite" });
   document.body.appendChild(root);
 
   const ui = role === "presenter" ? buildPresenterUI(root) : buildViewerUI(root);
 
-  // Load partysocket lazily; if it fails, tear the overlay down and no-op.
-  connect({ Reveal, role, room, host, token, name, root, ui }).catch((err) => {
-    console.warn("[collab] disabled — partysocket unavailable", err);
-    root.remove();
+  const transport = makeTransport(mode, {
+    roomId: room,
+    role,
+    name,
+    clientId,
+    // the deck tab (presenter) is the authority for the local transport
+    authority: role === "presenter",
   });
 
-  return { enabled: true };
+  const cx = { Reveal, role, room, name, clientId, root, ui, transport, control: null };
+  wire(cx);
+  transport.connect().catch((err) => {
+    console.warn("[engage] transport failed to connect", err);
+  });
+
+  // `control` is the authority-safe presenter control entry (poll-open/close,
+  // set-slide, ...) that engage/hud.js drives; it is null for a viewer tab.
+  return { enabled: true, transport, room, control: cx.control };
 }
 
 /* ------------------------------------------------------------------
-   PartyKit transport loader — ALTERNATE, not wired up in Wave 0.
-   Resolves the PartySocket class from a LOCALLY vendored module only
-   (vendor/partysocket.mjs, added in Wave 6). No CDN, no static import
-   specifier — so bundlers/CSP never see a remote host. Returns null
-   when the vendor file is absent; the caller warns and falls back to
-   the local BroadcastChannel transport.
+   wire — connect the Transport + authority to the Reveal deck and UI.
+   The deck tab (presenter/authority) runs the reducer; a viewer surface
+   only sends its own messages and renders authoritative state.
 ------------------------------------------------------------------ */
-async function loadPartySocket() {
-  try {
-    // Built at runtime so there is no literal CDN/remote string in source.
-    const spec = new URL("../vendor/partysocket.mjs", import.meta.url).href;
-    const mod = await import(spec);
-    return mod.PartySocket || mod.default || null;
-  } catch {
-    return null; // vendor module not present yet — caller falls back
-  }
-}
+function wire(cx) {
+  const { Reveal, role, root, ui, transport } = cx;
+  const isAuthority = transport.isAuthority === true;
 
-/* ------------------------------------------------------------------
-   Networking + wiring (async so we can load the vendored partysocket).
------------------------------------------------------------------- */
-async function connect(cx) {
-  const { Reveal, role, room, host, token, name, root, ui } = cx;
-
-  // partysocket is NOT vendored in Wave 0 — the PartyKit transport is an
-  // alternate that Wave 6 wires up (vendor/partysocket.mjs). We must never
-  // reach a CDN here (CSP-safe, buildless), so this path degrades cleanly.
-  const PartySocket = await loadPartySocket();
-  if (!PartySocket) {
-    console.warn(
-      "[collab] PartyKit transport needs vendor/partysocket.mjs (see PLATFORM-V2-CONCEPT.md Wave 6); falling back to local."
-    );
-    throw new Error("PartySocket transport unavailable");
-  }
-
-  const query = { t: token };
-  if (name) query.name = name;
-
-  const socket = new PartySocket({
-    host,
-    party: "main", // deck.ts is the `main` party (partykit.json → "main" field)
-    room,
-    query,
-  });
-
-  const state = {
-    self: role, // provisional; server confirms in `state`
-    poll: null, // last poll payload
+  /* local view state (what THIS tab renders) */
+  const view = {
+    poll: null, // last poll payload rendered
     votedOption: null,
     flying: 0,
   };
 
-  const send = (obj) => {
-    try {
-      if (socket.readyState === 1) socket.send(JSON.stringify(obj));
-    } catch {
-      /* dropped frame — reconnect will resync */
-    }
-  };
+  /* the AUTHORITY's canonical state (host tab only) */
+  const authState = isAuthority ? freshState() : null;
+
+  /* hostIngest — the presenter's OWN control verbs (set-slide, pointer,
+     poll-open/close, word-open/close) are reduced LOCALLY here and their
+     fan-out (slide/pointer/poll/wordcloud) is broadcast. They are NOT put
+     on the channel as raw verbs: viewers only need the resulting state.
+     Set by the authority block below; a no-op for a viewer tab. */
+  let hostIngest = () => {};
 
   /* ---- status chip helpers ---- */
   let statusTimer = 0;
@@ -517,64 +535,155 @@ async function connect(cx) {
     clearTimeout(statusTimer);
     statusTimer = setTimeout(() => ui.status.classList.remove("is-shown"), 2600);
   }
-
-  /* ---- socket lifecycle ---- */
-  socket.addEventListener("open", () => {
-    flashStatus(role === "presenter" ? "Live — you are presenting" : "Connected — following presenter");
-  });
-  socket.addEventListener("close", () => flashStatus("Reconnecting…"));
-  socket.addEventListener("error", () => flashStatus("Connection issue — retrying"));
-
-  socket.addEventListener("message", (evt) => {
-    let msg;
-    try {
-      msg = JSON.parse(evt.data);
-    } catch {
-      return;
+  transport.onStatus((s) => {
+    if (s === STATUS.LIVE) {
+      flashStatus(role === "presenter" ? "Live · engage room open" : "Connected · following presenter");
+    } else if (s === STATUS.RECONNECTING) {
+      flashStatus("Reconnecting…");
+    } else if (s === STATUS.CLOSED) {
+      flashStatus("Engage closed");
     }
-    if (!msg || typeof msg.type !== "string") return;
-    routeMessage(msg);
   });
 
-  /* ================= inbound routing ================= */
-  function routeMessage(msg) {
-    switch (msg.type) {
-      case "state": {
-        state.self = msg.role || role;
-        if (ui.setRole) ui.setRole(state.self);
-        if (msg.presence) updatePresence(msg.presence.count, msg.presence.hands);
-        if (msg.poll) applyPoll(msg.poll);
-        // viewer: jump to the presenter's current slide on join
-        if (state.self === "viewer" && msg.slide) followSlide(msg.slide);
-        // presenter: hydrate any standing questions
-        if (state.self === "presenter" && Array.isArray(msg.questions)) {
-          msg.questions.forEach((qq) => ui.addQuestion(qq));
-        }
-        break;
+  /* ================================================================
+     AUTHORITY host: reduce inbound messages, re-broadcast state.
+     Every message the room speaks passes through the reducer here;
+     the reducer validates it and returns messages to fan out. The
+     host also snapshots each `state` for late-joiner hydration.
+     Presenter-only messages from viewers are ignored IN THE REDUCER.
+  ================================================================ */
+  if (isAuthority) {
+    // Presence: this tab is the host (presenter), never counted as a
+    // viewer. We seed the count from live viewers as they say hello; a
+    // real peer-enumerating transport (Supabase presence, Wave 6) will
+    // replace this bookkeeping.
+    const viewers = new Set();
+
+    // Broadcast the reducer's fan-out. A `state` reply carries a `to` for
+    // addressing (BroadcastChannel fans out to all; the addressee filters);
+    // it is also snapshotted for the next late joiner + Safari fallback.
+    const broadcastEmits = (emits) => {
+      for (const m of emits) {
+        transport.send(m);
+        if (m.t === "state") transport.snapshot(m);
       }
-      case "slide":
-        if (state.self === "viewer") followSlide(msg);
-        break;
-      case "pointer":
-        if (state.self === "viewer") movePointer(msg);
-        break;
-      case "reaction":
-        flyReaction(msg.kind);
-        if (state.self === "presenter" && ui.incReaction) ui.incReaction();
-        break;
-      case "presence":
-        updatePresence(msg.count, msg.hands);
-        break;
-      case "poll":
-        applyPoll(msg);
-        break;
-      case "question":
-        if (state.self === "presenter") ui.addQuestion(msg);
-        break;
-      default:
-        break;
-    }
+    };
+
+    // Reduce a VIEWER message (channel-origin) and fan its result out.
+    const ingestViewer = (msg) => {
+      const { emit } = reduce(authState, msg);
+      broadcastEmits(emit);
+    };
+
+    // Reduce a PRESENTER control verb the host itself authored. Called
+    // directly (not over the channel) so the fan-out is broadcast without
+    // the raw verb ever echoing back into this reducer — no self-loop.
+    hostIngest = (msg) => {
+      const stamped = { ...msg, role: "presenter", from: cx.clientId };
+      const { emit } = reduce(authState, stamped);
+      broadcastEmits(emit);
+    };
+
+    // Subscribe ONLY to viewer->authority verbs. Each guards on
+    // from !== clientId so the host never re-reduces its OWN fan-out (the
+    // reducer echoes `reaction`/`question` under the same type name, and
+    // send() self-delivers — this guard is what breaks that loop).
+    const VIEWER_INBOUND = [
+      "hello",
+      "reaction",
+      "hand",
+      "question",
+      "question-upvote",
+      "poll-vote",
+      "word",
+      "vpointer",
+    ];
+    VIEWER_INBOUND.forEach((type) => {
+      transport.on(type, (msg) => {
+        if (msg.from === cx.clientId) return; // ignore our own re-broadcasts
+        if (type === "hello") {
+          viewers.add(msg.from);
+          // hydrate the joiner with a `state` snapshot (reducer handles it)
+          ingestViewer(msg);
+          // and bump presence to the live viewer set
+          const p = setPresenceCount(authState, viewers.size);
+          transport.send(p);
+          return;
+        }
+        ingestViewer(msg);
+      });
+    });
+
+    // A departing viewer (best-effort; BroadcastChannel has no close event,
+    // so this fires only on an explicit bye from the viewer surface).
+    transport.on("bye", (msg) => {
+      if (msg.from === cx.clientId) return;
+      viewers.delete(msg.from);
+      const p = setPresenceCount(authState, viewers.size);
+      transport.send(p);
+      const dropped = dropClient(authState, msg.from);
+      if (dropped) transport.send(dropped);
+    });
+
+    // Announce ourselves once on boot so any viewer that was ALREADY waiting
+    // (we just restarted, or the presenter refreshed the deck mid-talk)
+    // re-sends hello and is re-counted. New viewers say hello on their own
+    // connect, so this only heals the host-joined-late / host-restart case.
+    transport.send({ t: "host-online" });
   }
+
+  /* ================================================================
+     RENDER handlers (BOTH roles) — react to authoritative broadcasts.
+     These fire on the host too (send() self-delivers), so the deck's
+     own HUD and flying reactions stay in sync with what viewers see.
+  ================================================================ */
+
+  transport.on("state", (msg) => {
+    // ignore a snapshot addressed to a specific OTHER client
+    if (msg.to && msg.to !== cx.clientId) return;
+    if (msg.presence) updatePresence(msg.presence.count, msg.presence.hands);
+    if (msg.poll) applyPoll(msg.poll);
+    if (role === "viewer" && msg.slide) followSlide(msg.slide);
+    if (role === "presenter" && Array.isArray(msg.questions)) {
+      ui.resetQuestions && ui.resetQuestions();
+      msg.questions.forEach((qq) => ui.addQuestion(qq));
+    }
+  });
+
+  transport.on("slide", (msg) => {
+    if (role === "viewer") followSlide(msg);
+  });
+
+  transport.on("pointer", (msg) => {
+    if (role === "viewer") movePointer(msg);
+  });
+
+  transport.on("reaction", (msg) => {
+    // On BroadcastChannel every peer sees a viewer's RAW reaction as well as
+    // the authority's fan-out. Fly ONLY the authority-validated fan-out
+    // (role:presenter) or our OWN optimistic local echo (from === us). This
+    // keeps the whitelist honoured (invalid kinds never leave the reducer)
+    // and stops a non-sender viewer from flying the same reaction twice.
+    const isAuthorityFanout = msg.role === "presenter";
+    const isOwnEcho = msg.from === cx.clientId;
+    if (!isAuthorityFanout && !isOwnEcho) return;
+    flyReaction(msg.kind);
+    // count each reaction ONCE on the presenter HUD — only on the fan-out.
+    if (role === "presenter" && isAuthorityFanout && ui.incReaction) ui.incReaction();
+  });
+
+  transport.on("presence", (msg) => updatePresence(msg.count, msg.hands));
+
+  transport.on("poll", (msg) => applyPoll(msg));
+
+  transport.on("question", (msg) => {
+    // Only render the AUTHORITY's fan-out (role:presenter), which carries the
+    // assigned id + upvote count. A viewer's RAW question (visible to all on
+    // BroadcastChannel) has no id and must not create a duplicate HUD row.
+    if (role !== "presenter") return;
+    if (msg.role !== "presenter") return;
+    ui.addQuestion(msg);
+  });
 
   /* ---- presence ---- */
   function updatePresence(count, hands) {
@@ -588,7 +697,6 @@ async function connect(cx) {
     if (cur.h === slide.h && cur.v === slide.v) return; // already there
     suppressBroadcast = true;
     Reveal.slide(slide.h, slide.v);
-    // clear the guard after reveal settles this transition
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         suppressBroadcast = false;
@@ -610,8 +718,8 @@ async function connect(cx) {
   function flyReaction(kind) {
     const glyph = GLYPHS[kind];
     if (!glyph) return;
-    if (state.flying >= MAX_FLYING) return;
-    state.flying += 1;
+    if (view.flying >= MAX_FLYING) return;
+    view.flying += 1;
     const node = el("div", { class: "fc-fly" }, glyph);
     const spread = 120; // px of horizontal jitter around center
     const dx = Math.random() * spread - spread / 2;
@@ -621,7 +729,7 @@ async function connect(cx) {
       "animationend",
       () => {
         node.remove();
-        state.flying -= 1;
+        view.flying -= 1;
       },
       { once: true }
     );
@@ -629,25 +737,40 @@ async function connect(cx) {
 
   /* ---- poll rendering (both roles) ---- */
   function applyPoll(poll) {
-    state.poll = poll;
-    if (ui.renderPoll) ui.renderPoll(poll, state.votedOption, castVote);
+    view.poll = poll;
+    if (ui.renderPoll) ui.renderPoll(poll, view.votedOption, castVote);
   }
   function castVote(idx) {
-    if (!state.poll || !state.poll.open) return;
-    if (state.votedOption != null) return; // one vote per poll, client-side guard
-    state.votedOption = idx;
-    send({ type: "poll-vote", id: state.poll.id, option: idx });
-    if (ui.renderPoll) ui.renderPoll(state.poll, state.votedOption, castVote); // optimistic lock
+    if (!view.poll || !view.poll.open) return;
+    if (view.votedOption != null) return; // one vote per poll, client-side guard
+    view.votedOption = idx;
+    transport.send({ t: "poll-vote", id: view.poll.id, option: idx });
+    if (ui.renderPoll) ui.renderPoll(view.poll, view.votedOption, castVote);
   }
 
-  /* ================= presenter outbound ================= */
+  /* ================= presenter (host) outbound ================= */
   if (role === "presenter") {
-    // Broadcast slide index on every change (and once on ready).
+    // A presenter control verb (set-slide, pointer, poll-open/close). On the
+    // local transport the presenter IS the authority, so we reduce it in-tab
+    // via hostIngest (persists state + fans out `slide`/`poll`/etc., no self-
+    // loop). A non-authority presenter (Supabase, Wave 6) puts it on the wire
+    // for the authority session to reduce.
+    const sendControl = (msg) => {
+      if (isAuthority) hostIngest(msg);
+      else transport.send(msg);
+    };
+    // Expose the SAME authority-safe control entry to other deck-side modules
+    // (e.g. engage/hud.js poll auto-open). Routing hud's poll-open/close through
+    // hostIngest reduces them at the one choke point with no self-loop, instead
+    // of putting a raw control verb on the wire that nothing would reduce.
+    cx.control = sendControl;
+
+    // Bridge reveal 'slidechanged' -> set-slide so every viewer follows.
     const broadcastSlide = () => {
       if (suppressBroadcast) return;
       const idx = Reveal.getIndices();
       const cur = Reveal.getCurrentSlide();
-      send({ type: "set-slide", h: idx.h, v: idx.v, id: cur ? cur.id || "" : "" });
+      sendControl({ t: "set-slide", h: idx.h, v: idx.v, id: cur ? cur.id || "" : "" });
     };
     if (Reveal.isReady && Reveal.isReady()) broadcastSlide();
     Reveal.on("ready", broadcastSlide);
@@ -663,16 +786,14 @@ async function connect(cx) {
       const ax = (e.pageX - tx) / scale / AUTHOR_W;
       const ay = (e.pageY - ty) / scale / AUTHOR_H;
       if (ax < -0.05 || ax > 1.05 || ay < -0.05 || ay > 1.05) return;
-      send({ type: "pointer", x: ax, y: ay, visible: true });
+      sendControl({ t: "pointer", x: ax, y: ay, visible: true });
     };
-    // reveal toggles body.no-cursor when the `q` pointer is active;
-    // observe that class to start/stop mirroring in lockstep.
     const syncPointerMirror = () => {
       const on = document.body.classList.contains("no-cursor");
       if (on) document.addEventListener("mousemove", onMove);
       else {
         document.removeEventListener("mousemove", onMove);
-        send({ type: "pointer", x: 0, y: 0, visible: false });
+        sendControl({ t: "pointer", x: 0, y: 0, visible: false });
       }
     };
     const mo = new MutationObserver(syncPointerMirror);
@@ -681,24 +802,33 @@ async function connect(cx) {
     // wire HUD poll controls
     ui.onOpenPoll(() => {
       const built = promptPoll();
-      if (built) send({ type: "poll-open", ...built });
+      if (built) sendControl({ t: "poll-open", ...built });
     });
     ui.onClosePoll(() => {
-      if (state.poll) send({ type: "poll-close", id: state.poll.id });
+      if (view.poll) sendControl({ t: "poll-close", id: view.poll.id });
     });
   }
 
   /* ================= viewer outbound ================= */
   if (role === "viewer") {
+    // announce ourselves so the host hydrates us + counts presence
+    transport.send({ t: "hello" });
     // reactions
     ui.onReact((kind) => {
-      send({ type: "reaction", kind });
-      flyReaction(kind); // local echo for snappiness (server also fans out)
+      transport.send({ t: "reaction", kind }); // host fans it back to all
     });
     // raise hand
-    ui.onHand((on) => send({ type: "hand", on }));
+    ui.onHand((on) => transport.send({ t: "hand", on }));
     // ask question
-    ui.onAsk((text) => send({ type: "question", text }));
+    ui.onAsk((text) => transport.send({ t: "question", text }));
+    // leave cleanly (best-effort) so presence self-heals
+    window.addEventListener("pagehide", () => {
+      try {
+        transport.send({ t: "bye" });
+      } catch {
+        /* ignore */
+      }
+    });
   }
 
   /* geometry helper for the ghost pointer */
@@ -712,8 +842,6 @@ async function connect(cx) {
     }
     return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
   }
-
-  return socket;
 }
 
 /* ==================================================================
@@ -847,8 +975,8 @@ function buildPresenterUI(root) {
 
   // HUD
   const hud = el("div", { class: "fc-hud", role: "region", "aria-label": "Audience" });
-  const head = el("div", { class: "fc-hud__head" }, `<span>Audience — live</span>`);
-  const collapseBtn = el("button", { type: "button", title: "Hide", "aria-label": "Hide audience panel" }, "▾");
+  const head = el("div", { class: "fc-hud__head" }, `<span>Audience · live</span>`);
+  const collapseBtn = el("button", { type: "button", title: "Show", "aria-label": "Toggle audience panel" }, "▸");
   head.appendChild(collapseBtn);
 
   const stats = el("div", { class: "fc-hud__stats" });
@@ -878,21 +1006,71 @@ function buildPresenterUI(root) {
   const status = el("div", { class: "fc-status" });
   root.appendChild(status);
 
-  // collapse toggle
-  let collapsed = false;
-  collapseBtn.addEventListener("click", () => {
-    collapsed = !collapsed;
+  // Collapse toggle. Defaults COLLAPSED so the panel is just a small pill and
+  // never covers the slide (the deck can be projected). The presenter expands
+  // it to glance at engagement; it collapses again with the same control.
+  let collapsed = true;
+  const applyCollapsed = () => {
     stats.style.display = collapsed ? "none" : "";
     pollRow.style.display = collapsed ? "none" : "";
     qaHead.style.display = collapsed ? "none" : "";
     qa.style.display = collapsed ? "none" : "";
     collapseBtn.textContent = collapsed ? "▸" : "▾";
+    hud.classList.toggle("is-collapsed", collapsed); // shrink to a compact pill
+  };
+  applyCollapsed();
+  collapseBtn.addEventListener("click", () => {
+    collapsed = !collapsed;
+    applyCollapsed();
   });
 
   let reactionCount = 0;
   const pollHandlers = { open: null, close: null };
   openPollBtn.addEventListener("click", () => pollHandlers.open && pollHandlers.open());
   closePollBtn.addEventListener("click", () => pollHandlers.close && pollHandlers.close());
+
+  /* Q&A queue store: id -> { id, text, upvotes, ts, answered }. Rendered
+     sorted by upvotes desc then recency; answered questions sink and dim.
+     "Mark answered" is a local presenter view state (not broadcast). */
+  const qaStore = new Map();
+  function renderQa() {
+    const items = Array.from(qaStore.values()).sort((a, b) => {
+      if (a.answered !== b.answered) return a.answered ? 1 : -1; // answered last
+      return b.upvotes - a.upvotes || a.ts - b.ts;
+    });
+    qa.innerHTML = "";
+    if (items.length === 0) {
+      qa.appendChild(qaEmpty);
+      return;
+    }
+    for (const rec of items) {
+      const item = el("div", {
+        class: "fc-qa-item" + (rec.answered ? " is-answered" : ""),
+        "data-qid": rec.id,
+      });
+      const votes = rec.upvotes > 0 ? `<span class="fc-qa-votes">+${rec.upvotes}</span>` : "";
+      const textEl = el("span", { class: "fc-qa-text" });
+      textEl.textContent = rec.text; // textContent — never innerHTML on viewer input
+      const meta = el("div", { class: "fc-qa-meta" }, votes);
+      const answerBtn = el(
+        "button",
+        {
+          type: "button",
+          class: "fc-qa-answer",
+          title: rec.answered ? "Answered" : "Mark answered",
+          "aria-pressed": String(rec.answered),
+        },
+        rec.answered ? "Answered" : "Mark answered"
+      );
+      answerBtn.addEventListener("click", () => {
+        rec.answered = !rec.answered;
+        renderQa();
+      });
+      meta.appendChild(answerBtn);
+      item.append(textEl, meta);
+      qa.appendChild(item);
+    }
+  }
 
   return {
     status,
@@ -907,12 +1085,25 @@ function buildPresenterUI(root) {
     renderPoll(pollData) {
       renderPollCard(poll, pollData, { interactive: false });
     },
+    // idempotent by question id, sorted by upvotes desc then recency. A fresh
+    // `question` for a known id (an upvote re-emit or a hydration snapshot)
+    // updates in place; the queue is re-sorted so the most-wanted question
+    // rises to the top. Each row carries a "mark answered" action.
     addQuestion(qq) {
-      if (qaEmpty.parentNode) qaEmpty.remove();
-      const item = el("div", { class: "fc-qa-item" });
-      item.textContent = qq.text;
-      qa.appendChild(item);
-      qa.scrollTop = qa.scrollHeight;
+      const qid = qq && qq.id ? String(qq.id) : "";
+      if (!qid) return;
+      const rec = qaStore.get(qid) || { answered: false };
+      rec.id = qid;
+      rec.text = typeof qq.text === "string" ? qq.text : rec.text || "";
+      rec.upvotes = qq && typeof qq.upvotes === "number" ? qq.upvotes : rec.upvotes || 0;
+      rec.ts = qq && typeof qq.ts === "number" ? qq.ts : rec.ts || Date.now();
+      qaStore.set(qid, rec);
+      renderQa();
+    },
+    // clear the list before a hydration snapshot re-adds authoritative Q&A
+    resetQuestions() {
+      qaStore.clear();
+      renderQa();
     },
     onOpenPoll(fn) {
       pollHandlers.open = fn;
@@ -952,7 +1143,7 @@ function renderPollCard(container, poll, { votedOption = null, castVote = null, 
 
   const eyebrow = el("div", { class: "fc-poll__eyebrow" });
   eyebrow.append(
-    el("span", {}, interactive ? "Live poll" : "Poll — results"),
+    el("span", {}, interactive ? "Live poll" : "Poll · results"),
     el("span", { class: `fc-live ${poll.open ? "is-live" : ""}` }, poll.open ? "OPEN" : "CLOSED")
   );
   const question = el("div", { class: "fc-poll__q" });

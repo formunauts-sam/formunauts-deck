@@ -100,6 +100,7 @@ A slide inherits this `chrome` when it does not set one. Only `light` / `muted`
 | `nextSteps` | `light` |
 | `bentoBoard` | `muted` |
 | `statusBoard` | `muted` (deprecated) |
+| `poll` | `muted` |
 
 `cover` and `closing` are full-bleed: they own their whole section body and do
 not receive the shared eyebrow/headline/lead chrome.
@@ -248,6 +249,25 @@ Retired because it reads as a dark board. Migrate to `bentoBoard` with tile
 |-------|------|----------|---------|
 | `groups` | array of `{ title, items[] }` | no | Status columns. |
 | `groups[].items[]` | `{ t, state? }` | no | `state` is `done` \| `active` \| `next`. |
+
+### poll (`poll.js`)
+
+Engage-native poll slide (Wave 4). Poses a question and options on-brand; when
+the deck reaches this slide the presenter HUD auto-opens the poll to viewers, and
+live votes fill each option's result bar (scaleX, brand blue) on the slide. The
+single leading option gets the one sanctioned red-stopper accent. The option `id`
+is the vote token the authority tallies, so it must be stable and ASCII.
+
+| Field | Type | Required | Renders |
+|-------|------|----------|---------|
+| `question` | string | no | The poll prompt (falls back to `headline` when absent). |
+| `options` | array of option (2..6) | yes | The choices. |
+| `options[].id` | string (ASCII) | yes (per option) | Stable vote token the authority tallies. |
+| `options[].label` | string | yes (per option) | What the audience reads. |
+
+Motion and live counts are the chrome's job: the renderer draws the static board
+(bars at 0); the deck host paints results as votes arrive. In print/peek the board
+reads correctly as an un-voted poll.
 
 ---
 

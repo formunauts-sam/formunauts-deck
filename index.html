@@ -15,6 +15,8 @@
   <link rel="stylesheet" href="plugin/customcontrols/style.css" />
   <link rel="stylesheet" href="plugin/marker/marker.css" />
   <link rel="stylesheet" href="template/interactive.css" />
+  <!-- Wave 4 Engage: poll archetype result bars + reaction ticker (deck-side) -->
+  <link rel="stylesheet" href="template/engage/engage.css" />
 </head>
 <body>
   <div class="reveal"><div class="slides"><!-- render.js injects <section>s here --></div></div>
@@ -38,6 +40,7 @@
     import { initInteractive } from "./template/interactive.js";
     import { initDeckLink } from "./template/presenter/deck-link.js";
     import { initCollab } from "./template/collab.js";
+    import { initHud } from "./template/engage/hud.js";
     import { ACTIVE_DECK } from "./decks/manifest.js";
 
     /* ---------------------------------------------------------------
@@ -99,7 +102,15 @@
     initAnim(Reveal);            // KPI count-up + reduced-motion gate + ring-drift
     initInteractive(Reveal);     // funnel / carousel / slider / reveal-card / count-replay
     const { peek } = initDeckLink(Reveal);   // presenter sync + owns ?present=peek
-    initCollab(Reveal);          // self-disables unless PARTY_HOST + ?room present
+    // Engage host: boots by default on the deck as the local-transport
+    // authority. Room derives from opts.room || deck.meta.room || deck id,
+    // so it is joinable locally out of the box. Skip on peek thumbnails.
+    if (!peek) {
+      const engage = initCollab(Reveal, { deck, deckId: safe });
+      // Wave 4: poll-archetype auto-open + on-deck result bars + reaction
+      // ticker, riding the SAME authority transport the host created.
+      if (engage && engage.enabled) initHud(Reveal, engage);
+    }
 
     /* Peek thumbnails (presenter previews): calm + correct — strip motion, fill count-ups */
     if (peek) {

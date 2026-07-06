@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <!-- Mobile-first, portrait, one-thumb. viewport-fit=cover so the thumb
+       zone can respect the iOS home-indicator safe area. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#0074C8" />
+  <title>FORMUNAUTS, Follow along</title>
+
+  <!-- CHROME. Same vendored stylesheets the deck uses, so the mirrored
+       slide renders with the IDENTICAL brand chrome the projector shows. -->
+  <link rel="stylesheet" href="dist/reset.css" />
+  <link rel="stylesheet" href="dist/reveal.css" />
+  <link rel="stylesheet" href="template/brand.css" />
+  <link rel="stylesheet" href="template/deck.css" />
+  <!-- Wave 4 Engage UI (viewer thumb zone + presenter HUD + poll archetype) -->
+  <link rel="stylesheet" href="template/engage/engage.css" />
+
+  <style>
+    /* ============================================================
+       Viewer surface, portrait, mobile-first, one-thumb.
+       Tokens only (brand.css). Layout is a fixed three-row column:
+         [presence bar]  slim, top
+         [stage]         mirrored 16:9 slide, centered, scaled to width
+         [thumb zone]    empty now; Wave 4 fills it (reactions/ask/poll)
+       No emoji. No em-dashes. Motion is opacity/transform only.
+    ============================================================ */
+    html, body {
+      margin: 0; height: 100%;
+      background: var(--blue-50);
+      font-family: var(--font-body);
+      color: var(--fg-default);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overscroll-behavior: none;
+    }
+    body {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      /* fill the small-viewport height on mobile, avoiding URL-bar jumps */
+      min-height: 100svh;
+      overflow: hidden;
+    }
+
+    /* ---- presence bar (top) ---- */
+    .vw-topbar {
+      display: flex; align-items: center; gap: var(--space-3);
+      padding: calc(env(safe-area-inset-top, 0px) + 10px) var(--space-5) 10px;
+      background: var(--bg-surface);
+      box-shadow: var(--elevation-2);
+      position: relative; z-index: 3;
+    }
+    .vw-brand { display: inline-flex; align-items: center; gap: 8px; }
+    .vw-brand img { width: 22px; height: 22px; display: block; }
+    .vw-brand b {
+      font-family: var(--font-display); font-weight: 600;
+      font-size: var(--body-md); letter-spacing: .01em; color: var(--fmnts-primary);
+    }
+    .vw-presence {
+      margin-left: auto;
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 12px 6px 10px;
+      border-radius: var(--radius-pill);
+      background: var(--blue-50);
+      font-size: var(--body-sm); font-weight: 600; line-height: 1;
+      transition: background var(--duration-normal) var(--ease-out-expo);
+    }
+    .vw-presence .vw-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--fg-subtle); transition: background var(--duration-normal) var(--ease-out-expo);
+    }
+    .vw-presence.is-live .vw-dot {
+      background: var(--fmnts-primary);
+      box-shadow: 0 0 0 4px rgba(0,116,200,.16);
+    }
+    .vw-presence .vw-count {
+      font-family: var(--font-display); font-feature-settings: "tnum" 1;
+      color: var(--fmnts-primary); font-size: var(--body-md);
+    }
+    .vw-presence .vw-lbl { color: var(--fg-muted); font-weight: 500; }
+
+    /* ---- stage (center): a 16:9 frame the deck is mirrored into ----
+       Reveal runs EMBEDDED, so it measures .vw-reveal and fits the
+       1280x720 canvas into it. We size .vw-frame to portrait width and
+       let aspect-ratio hold the 16:9 shape; the frame is centered in the
+       available row with breathing room above/below. */
+    .vw-stage {
+      display: flex; align-items: center; justify-content: center;
+      padding: var(--space-5) var(--space-4);
+      min-height: 0; /* let the row shrink so the frame never overflows */
+    }
+    .vw-frame {
+      width: 100%; max-width: 560px;
+      aspect-ratio: 16 / 9;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: var(--bg-surface);
+      box-shadow: var(--elevation-4);
+      position: relative;
+    }
+    /* the reveal instance fills the frame; embedded mode scopes scaling */
+    .vw-reveal { position: absolute; inset: 0; }
+    .vw-reveal .slides { width: 100%; height: 100%; }
+    /* the viewer never touches the slide, kill any pointer capture so a
+       tap scrolls/does nothing rather than selecting deck text. */
+    .vw-frame, .vw-frame * {
+      -webkit-user-select: none; user-select: none;
+      -webkit-touch-callout: none;
+    }
+    .vw-reveal, .vw-reveal * { pointer-events: none !important; }
+
+    /* ---- thumb zone (bottom): EMPTY placeholder for Wave 4 ----
+       This is the DOM hook the interaction layer fills with the reaction
+       bar, Ask composer, and poll bottom-sheet. Sized for one-thumb reach
+       and respecting the home-indicator safe area. */
+    .vw-thumb {
+      position: relative; z-index: 3;
+      min-height: 64px;
+      padding: 12px var(--space-5) calc(env(safe-area-inset-bottom, 0px) + 14px);
+      background: var(--bg-surface);
+      box-shadow: var(--elevation-3);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .vw-thumb__hint {
+      font-size: var(--body-sm); color: var(--fg-subtle);
+      text-align: center; letter-spacing: .01em;
+    }
+
+    /* ---- status chip: subtle, top-right under the bar, ephemeral ---- */
+    .vw-status {
+      position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 54px);
+      transform: translateX(-50%);
+      z-index: 4;
+      font-size: var(--body-xs); font-weight: 600; letter-spacing: .02em;
+      padding: 5px 12px; border-radius: var(--radius-pill);
+      background: var(--bg-surface); box-shadow: var(--elevation-3);
+      color: var(--fg-muted);
+      opacity: 0; pointer-events: none;
+      transition: opacity var(--duration-normal) var(--ease-out-expo);
+    }
+    /* show the chip only while not settled into the live-follow state */
+    .vw-status.is-connecting,
+    .vw-status.is-reconnecting,
+    .vw-status.is-offline { opacity: 1; }
+    .vw-status.is-connecting { color: var(--fmnts-primary); }
+    .vw-status.is-reconnecting { color: var(--fmnts-primary); }
+    .vw-status.is-offline { color: var(--fmnts-secondary); }
+    .vw-status .vw-status__dot {
+      display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+      background: currentColor; margin-right: 6px; vertical-align: middle;
+    }
+
+    /* larger phones / small tablets: cap the frame so it stays phone-shaped */
+    @media (min-width: 620px) {
+      .vw-frame { max-width: 600px; }
+    }
+
+    /* reduced motion: no chip fade, no transitions */
+    @media (prefers-reduced-motion: reduce) {
+      .vw-presence, .vw-presence .vw-dot, .vw-status { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <!-- presence bar -->
+  <header class="vw-topbar">
+    <span class="vw-brand">
+      <img src="assets/logos/formunauts_visual_blue.svg" width="22" height="22" alt="" aria-hidden="true" />
+      <b>FORMUNAUTS</b>
+    </span>
+    <span class="vw-presence" id="vw-presence" aria-live="polite">
+      <span class="vw-dot" aria-hidden="true"></span>
+      <span class="vw-count" id="vw-count">0</span>
+      <span class="vw-lbl">watching</span>
+    </span>
+  </header>
+
+  <!-- subtle connection status chip -->
+  <div class="vw-status is-connecting" id="vw-status" role="status" aria-live="polite">Connecting</div>
+
+  <!-- mirrored slide, 16:9, centered -->
+  <main class="vw-stage" aria-label="Live slide">
+    <div class="vw-frame">
+      <div class="reveal vw-reveal" aria-hidden="true">
+        <div class="slides"><!-- render.js injects the deck's <section>s here --></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- thumb zone: empty now; Wave 4 fills #vw-thumb with reactions/ask/poll -->
+  <footer class="vw-thumb" id="vw-thumb" aria-label="Actions">
+    <span class="vw-thumb__hint">Reactions and questions arrive here soon.</span>
+  </footer>
+
+  <!-- Vendored reveal.js core (CDN-free). No plugins: the viewer never
+       navigates, annotates, or opens notes; it only mirrors. -->
+  <script src="dist/reveal.js"></script>
+
+  <script type="module">
+    import { renderDeck, loadDeck, initViewer, initThumbZone } from "./template/engage/viewer.js";
+
+    /* Load the same deck index.html would (?deck=<id>, default = active). */
+    const { deck, deckId } = await loadDeck();
+    if (deck?.meta?.title) {
+      document.title = `FORMUNAUTS, ${deck.meta.title} (follow along)`;
+    }
+
+    /* Build the identical chrome the projector renders. */
+    const stage = document.querySelector(".vw-reveal");
+    renderDeck(deck, stage.querySelector(".slides"));
+
+    /* Boot reveal in LOCKED FOLLOW mode:
+         - embedded: scope scaling to the .vw-reveal frame (not fullscreen)
+         - keyboard/touch/controls OFF: the viewer never self-navigates
+         - the ONLY thing that changes the slide is the presenter, arriving
+           over Transport (handled in initViewer -> followSlide).
+       Same author canvas (1280x720) + brand ease so the mirror matches. */
+    const Reveal = new window.Reveal(stage, {
+      width: 1280, height: 720, margin: 0, minScale: 0.1, maxScale: 4.0,
+      center: false, embedded: true,
+      controls: false, progress: false, slideNumber: false,
+      keyboard: false, touch: false, hash: false, respondToHashChanges: false,
+      disableLayout: false,
+      /* CRITICAL: reveal auto-activates its SCROLL view when the frame is
+         narrower than scrollActivationWidth (default 435px). Our mirror sits
+         in a small portrait frame, which would trip that and break slide
+         navigation (Reveal.slide would scroll instead of jump). A non-number
+         disables the auto-scroll check entirely, keeping the classic scaled
+         deck reveal follows by index. */
+      view: null, scrollActivationWidth: null,
+      transition: "fade", transitionSpeed: "default", backgroundTransition: "fade",
+      fragments: false,
+    });
+    await Reveal.initialize();
+
+    /* Wire the viewer controller: hydrate -> hello -> follow. It owns the
+       transport, presence bar, and status chip; it exposes getSlide/onSlide
+       and the #vw-thumb container for the Wave 4 interaction layer. */
+    const mount = {
+      presenceBar: document.getElementById("vw-presence"),
+      count: document.getElementById("vw-count"),
+      status: document.getElementById("vw-status"),
+      thumbZone: document.getElementById("vw-thumb"),
+      stage,
+    };
+    const viewer = initViewer(Reveal, { deck, deckId, mount });
+
+    /* Wave 4: mount the audience interaction layer (reaction bar, raise-hand,
+       Ask composer + upvoted Q&A, poll bottom-sheet) into the thumb zone. It
+       rides the SAME transport the follow-along uses. */
+    const interactions = initThumbZone(viewer);
+
+    /* Expose the controllers for manual testing. */
+    window.__fmntsViewer = viewer;
+    window.__fmntsInteractions = interactions;
+  </script>
+</body>
+</html>
