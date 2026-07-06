@@ -93,6 +93,35 @@
       }
     },
 
+    "comparisonColumn": {
+      "type": "object",
+      "description": "One side of a comparison. Optional title, an optional single red accent, and a list of rows (string or scored object).",
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string", "description": "Column header." },
+        "tone": { "enum": ["accent"], "description": "The one red stopper column (max one; side a wins if both ask)." },
+        "items": {
+          "type": "array",
+          "description": "Rows. A bare string is a plain label; an object adds a 0..1 score bar and/or a figure.",
+          "items": {
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "object",
+                "required": ["label"],
+                "additionalProperties": false,
+                "properties": {
+                  "label": { "type": "string" },
+                  "score": { "type": "number", "minimum": 0, "maximum": 1, "description": "0..1 score bar (scaleX)." },
+                  "value": { "type": ["string", "number"], "description": "Optional figure shown on the row." }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+
     "slideBase": {
       "type": "object",
       "description": "Fields every slide may carry. id + archetype required; the narrative fields (eyebrow/headline/lead) plus notes/timing/chrome are the shared chrome.",
@@ -107,7 +136,9 @@
           "enum": [
             "cover", "overviewBullets", "campaignAnalysis", "projectVisual",
             "processDiagram", "nextSteps", "closing", "bentoBoard", "statusBoard",
-            "poll"
+            "poll", "bigStat", "kpiDashboard", "comparison", "agenda",
+            "sectionDivider", "timeline", "pullQuote", "logoWall", "imageFullBleed",
+            "map"
           ],
           "description": "Which renderer builds the slide body."
         },
@@ -521,6 +552,267 @@
                   }
                 }
               }
+            }
+          }
+        },
+
+        {
+          "if": { "properties": { "archetype": { "const": "bigStat" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "value": { "type": ["string", "number"], "description": "The hero figure. A clean integer counts up (0 to value); a decimal or string (e.g. \"1.8M\") renders literally, no count-up." },
+              "unit": { "type": "string", "description": "Optional unit beside the hero numeral, e.g. \"%\", \"EUR\", \"k\"." },
+              "label": { "type": "string", "minLength": 1, "description": "The one-line meaning of the number (what it measures)." },
+              "context": { "type": "string", "description": "Optional second line of context under the label." },
+              "sub": {
+                "type": "object",
+                "description": "Optional supporting sub-stat (a smaller second figure).",
+                "required": ["value", "label"],
+                "additionalProperties": false,
+                "properties": {
+                  "value": { "type": ["string", "number"], "description": "Sub-figure; clean integers count up." },
+                  "label": { "type": "string", "description": "What the sub-figure measures." }
+                }
+              },
+              "spark": {
+                "type": "array",
+                "description": "Optional thin sparkbar (up to 12 numeric values; drawn in, normalized to the max). Wins over ring if both are given.",
+                "items": { "type": "number" },
+                "maxItems": 12
+              },
+              "ring": { "type": "number", "minimum": 0, "maximum": 1, "description": "Optional thin draw-in accent ring; 0..1 sets the arc sweep. Ignored when spark is present." }
+            },
+            "required": ["value", "label"]
+          }
+        },
+
+        {
+          "if": { "properties": { "archetype": { "const": "kpiDashboard" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "metrics": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 6,
+                "description": "3..6 metric cells. Each boots a count-up numeral, an optional scaleX meter, and an optional draw-in ring together on entry.",
+                "items": {
+                  "type": "object",
+                  "required": ["value", "label"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "value": { "type": ["string", "number"], "description": "Cell figure. Clean integer counts up; decimal/string renders literally." },
+                    "unit": { "type": "string", "description": "Optional unit beside the numeral, e.g. \"%\", \"k\"." },
+                    "label": { "type": "string", "minLength": 1, "description": "What the cell measures." },
+                    "meter": { "type": "number", "minimum": 0, "maximum": 1, "description": "Optional meter fill 0..1 (scaleX)." },
+                    "ring": { "type": "number", "minimum": 0, "maximum": 1, "description": "Optional draw-in ring 0..1 (arc sweep)." },
+                    "tone": { "enum": ["accent"], "description": "Red money-metric accent. At most one per surface; the renderer honours only the first accent cell." }
+                  }
+                }
+              }
+            },
+            "required": ["metrics"]
+          }
+        },
+
+        {
+          "if": { "properties": { "archetype": { "const": "comparison" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "a": { "$ref": "#/$defs/comparisonColumn" },
+              "b": { "$ref": "#/$defs/comparisonColumn" }
+            },
+            "required": ["a", "b"]
+          }
+        },
+
+        {
+          "if": { "properties": { "archetype": { "const": "agenda" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "items": {
+                "type": "array",
+                "description": "Numbered section list that doubles as a nav map. Each line can FLIP-morph into the matching sectionDivider (same number).",
+                "items": {
+                  "oneOf": [
+                    { "type": "string" },
+                    {
+                      "type": "object",
+                      "required": ["title"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "n": { "type": ["string", "number"], "description": "Section number (defaults to 1-based position). Morph anchor: pairs with a sectionDivider's number via data-id=\"agenda-<n>\"." },
+                        "title": { "type": "string", "description": "Section title." },
+                        "note": { "type": "string", "description": "Small note under the title (duration, sub-topic)." }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+
+        {
+          "if": { "properties": { "archetype": { "const": "sectionDivider" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "description": "Full-bleed blue section interstitial. The title carries data-id=\"agenda-<number>\" so a matching agenda line FLIP-morphs into it (reveal auto-animate). Owns its whole body; no shared chrome.",
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "number": { "type": ["string", "number"], "description": "Section number. Fills the giant ghost numeral AND is the morph anchor: pairs with an agenda line via data-id=\"agenda-<number>\"." },
+              "title": { "type": "string", "description": "Section title, lands as the large headline (the morph destination)." },
+              "sub": { "type": "string", "description": "Optional sub-line under the title." }
+            }
+          }
+        },
+
+        {
+          "if": { "properties": { "archetype": { "const": "timeline" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "orientation": { "enum": ["horizontal", "vertical"], "description": "Spine direction. Default horizontal (nodes spread L->R); vertical stacks top->bottom on the left rail." },
+              "milestones": {
+                "type": "array",
+                "description": "Ordered milestones the self-drawing spine passes; each fades up in sequence.",
+                "items": {
+                  "type": "object",
+                  "required": ["title"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "when": { "type": "string", "description": "Datestamp tag, e.g. \"Q3\" or \"~1 wk\"." },
+                    "title": { "type": "string", "description": "Milestone title." },
+                    "note": { "type": "string", "description": "Small supporting note." },
+                    "state": { "enum": ["done", "active", "next"], "description": "Milestone state (dot styling). Default next." }
+                  }
+                }
+              }
+            }
+          }
+        },
+
+        {
+          "if": { "properties": { "archetype": { "const": "pullQuote" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "quote": { "type": "string", "description": "The quote body (Chillax display). Rendered in clause-sized word-groups that fade up in sequence." },
+              "cite": { "type": "string", "description": "Attribution name." },
+              "role": { "type": "string", "description": "Attribution role/context under the name." },
+              "portrait": {
+                "type": "object",
+                "description": "Optional portrait, revealed with a clip-path wipe. ONE framed media (never a bare <img>).",
+                "required": ["file"],
+                "additionalProperties": false,
+                "properties": {
+                  "kind": { "enum": ["asset", "device"], "description": "\"device\" seats the portrait in hardware chrome (cover-crop); \"asset\" mats it (contain). Default device." },
+                  "file": { "type": "string", "minLength": 1, "description": "Filename only, relative to meta.imagesBase. Must be registered in PX/DEVICE_PX in _shared.js." },
+                  "device": { "enum": ["phone", "browser", "desk"], "description": "device kind only. Frame style. Default phone." },
+                  "crop": { "enum": ["top", "center", "bottom"], "description": "device kind only. Cover-crop anchor. Default center." },
+                  "ratioClass": { "type": "string", "description": "asset kind only. Override the RATIO lookup." },
+                  "alt": { "type": "string", "description": "Accessible label." }
+                }
+              }
+            }
+          }
+        },
+
+        {
+          "if": { "properties": { "archetype": { "const": "logoWall" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "logos": {
+                "type": "array",
+                "description": "Partner/charity marks. Each mats in a contain frame so mixed shapes coexist. Hovering one spotlights it (dims the rest).",
+                "items": {
+                  "type": "object",
+                  "required": ["src"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "src": { "type": "string", "minLength": 1, "description": "Filename only, relative to meta.imagesBase." },
+                    "alt": { "type": "string", "description": "Accessible label. Defaults to a de-slugged filename." },
+                    "url": { "type": "string", "description": "Display-only caption label under the mark (e.g. the org name)." }
+                  }
+                }
+              }
+            }
+          }
+        },
+
+        {
+          "if": { "properties": { "archetype": { "const": "imageFullBleed" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "src": { "type": "string", "minLength": 1, "description": "Filename only, relative to meta.imagesBase. Registered in PX/DEVICE_PX for CLS-free sizing. Cover-cropped edge to edge." },
+              "alt": { "type": "string", "description": "Accessible label for the photo." },
+              "title": { "type": "string", "description": "Over-scrim headline (distinct from the shared chrome headline)." },
+              "caption": { "type": "string", "description": "Caption line inside the scrim." },
+              "credit": { "type": "string", "description": "Small photo credit under the caption." },
+              "focal": { "enum": ["top", "center", "bottom"], "description": "object-position anchor for the cover-crop. Default center." }
+            }
+          }
+        },
+
+        {
+          "if": { "properties": { "archetype": { "const": "map" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "region": { "enum": ["at", "ch", "eu"], "description": "Which stylised outline to draw. Default at. Not to scale." },
+              "pins": {
+                "type": "array",
+                "description": "Location pins in 0..100 viewBox percentages. At most one tone:\"accent\" (the red stopper).",
+                "items": {
+                  "type": "object",
+                  "required": ["x", "y", "label"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "x": { "type": "number", "minimum": 0, "maximum": 100, "description": "Horizontal percent (0 left .. 100 right)." },
+                    "y": { "type": "number", "minimum": 0, "maximum": 100, "description": "Vertical percent (0 top .. 100 bottom)." },
+                    "label": { "type": "string", "minLength": 1, "description": "Pin label (real type, not SVG text)." },
+                    "tone": { "enum": ["accent"], "description": "Red-accented pin. At most one per surface." }
+                  }
+                }
+              },
+              "routes": {
+                "type": "array",
+                "description": "Drawn arcs between pins, by index into pins[]. Dangling indices are skipped.",
+                "items": {
+                  "type": "object",
+                  "required": ["from", "to"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "from": { "type": "integer", "minimum": 0, "description": "Index of the origin pin." },
+                    "to": { "type": "integer", "minimum": 0, "description": "Index of the destination pin." }
+                  }
+                }
+              },
+              "caption": { "type": "string", "description": "Small footnote under the map." }
             }
           }
         }

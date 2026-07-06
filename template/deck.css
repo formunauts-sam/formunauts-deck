@@ -1213,3 +1213,755 @@ body.is-peek .amb-cadence__pulse,
 body.is-peek .amb-connector,
 body.is-peek .metric-card--accent::after { animation: none !important; }
 body.is-peek .amb-connector { transform: none !important; }
+
+/* =========================================================================
+   §13 WAVE-5 ARCHETYPES — bigStat · kpiDashboard · comparison · agenda ·
+   sectionDivider · timeline · pullQuote · logoWall · imageFullBleed · map.
+   Each block is uniquely prefixed so concatenation never collides. Every
+   bespoke keyframe carries matching print-pdf / is-peek / reduced-motion
+   guards (mirroring §6/§8/§10/§11) so the finished state always shows.
+   ========================================================================= */
+
+/* -----------------------------------------------------------
+   13.1 BIG-STAT (archetype: bigStat) — the money-number slide.
+   ONE hero Chillax numeral (count-up) + unit + context, with an
+   optional supporting sub-stat and a thin draw-in accent (sparkbar
+   scaleY / ring stroke-dashoffset). Fills the content band; the
+   numeral dominates by scale contrast. All motion compositor-safe.
+----------------------------------------------------------- */
+.bigstat {
+  position: absolute; inset: 248px 80px 128px 80px;
+  display: grid; grid-template-columns: minmax(0, 6.6fr) minmax(0, 3.4fr);
+  column-gap: 56px; align-items: center;
+}
+.bigstat__hero { min-width: 0; display: flex; flex-direction: column; gap: var(--space-4); }
+.bigstat__figure { display: flex; align-items: baseline; gap: var(--space-3); min-width: 0; }
+.bigstat__value {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1; font-weight: 700;
+  font-size: var(--display-2xl); line-height: var(--display-2xl-lh); letter-spacing: -0.03em;
+  color: var(--fmnts-primary);
+}
+.bigstat__unit {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1; font-weight: 600;
+  font-size: var(--display-md); line-height: 1; color: var(--fmnts-primary-75);
+}
+.bigstat__label {
+  font-family: var(--font-body); font-weight: 600;
+  font-size: var(--h4); line-height: var(--h4-lh); color: var(--fg-default); max-width: 640px;
+}
+.bigstat__context {
+  font-size: var(--body-md); line-height: var(--body-md-lh); color: var(--fg-muted); max-width: 600px;
+}
+
+/* right aside: the accent + the supporting sub-stat, stacked */
+.bigstat__aside {
+  min-width: 0; display: flex; flex-direction: column; gap: var(--space-6);
+  align-items: flex-start; justify-content: center;
+}
+
+/* sub-stat — the second, smaller figure that grounds the hero number */
+.bigstat__sub {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: var(--space-4) var(--space-5);
+  background: var(--bg-surface); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md); box-shadow: var(--elevation-1); align-self: stretch;
+}
+.bigstat__sub-value {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1; font-weight: 600;
+  font-size: var(--h2); line-height: 1; color: var(--fmnts-primary);
+}
+.bigstat__sub-label { font-size: var(--body-sm); line-height: var(--body-sm-lh); color: var(--fg-muted); }
+
+/* sparkbar — a thin row of bars; each draws in via scaleY from the baseline */
+.bigstat__spark {
+  align-self: stretch; height: 96px;
+  display: flex; align-items: flex-end; gap: 8px;
+}
+.bigstat__spark-bar {
+  flex: 1 1 0; min-width: 0; height: 100%;
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+  background: var(--fmnts-primary-50);
+  transform-origin: bottom center;
+  transform: scaleY(var(--bar-scale, 1));      /* final composed state (print/peek/reduced) */
+}
+.bigstat__spark-bar:last-child { background: var(--fmnts-primary); }  /* the latest bar reads as "now" */
+
+/* ring — a single draw-in arc (stroke-dashoffset 100 -> drawn) */
+.bigstat__ring { align-self: center; width: 132px; height: 132px; }
+.bigstat__ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }  /* start the sweep at 12 o'clock */
+.bigstat__ring circle { fill: none; }
+.bigstat__ring-track { stroke: var(--blue-100); stroke-width: 8; }
+.bigstat__ring-arc {
+  stroke: var(--fmnts-primary); stroke-width: 8; stroke-linecap: round;
+  stroke-dasharray: 100 100;
+  stroke-dashoffset: calc(100 - var(--ring-drawn, 100));   /* final drawn state by default */
+}
+
+/* ---- entrance motion (compositor-only; gated to the present live slide) ---- */
+@keyframes bigstat-spark-grow { from { transform: scaleY(0); } }
+@keyframes bigstat-ring-draw  { from { stroke-dashoffset: 100; } }
+.reveal .slides section.present .bigstat__spark-bar {
+  animation: bigstat-spark-grow var(--dur-count, 900ms) var(--ease-orbit) both;
+  animation-delay: calc(var(--anim-step, 0) * var(--stagger-tight, 45ms));
+}
+.reveal .slides section.present .bigstat__ring-arc {
+  animation: bigstat-ring-draw var(--dur-draw, 1400ms) var(--ease-orbit) 200ms both;
+}
+
+/* ---- degradation guards: final visible state under reduced-motion/print/peek ---- */
+@media (prefers-reduced-motion: reduce) {
+  .reveal .slides section.present .bigstat__spark-bar,
+  .reveal .slides section.present .bigstat__ring-arc { animation: none !important; }
+  .bigstat__spark-bar { transform: scaleY(var(--bar-scale, 1)) !important; }
+  .bigstat__ring-arc { stroke-dashoffset: calc(100 - var(--ring-drawn, 100)) !important; }
+}
+body.print-pdf .bigstat__spark-bar,
+body.print-pdf .bigstat__ring-arc,
+body.is-peek .bigstat__spark-bar,
+body.is-peek .bigstat__ring-arc { animation: none !important; }
+body.print-pdf .bigstat__spark-bar, body.is-peek .bigstat__spark-bar { transform: scaleY(var(--bar-scale, 1)) !important; }
+body.print-pdf .bigstat__ring-arc, body.is-peek .bigstat__ring-arc { stroke-dashoffset: calc(100 - var(--ring-drawn, 100)) !important; }
+
+/* rides above the ghost index like the other content regions */
+.slide .bigstat { position: absolute; z-index: 1; }
+
+/* -----------------------------------------------------------
+   13.2 KPI-DASHBOARD (archetype: kpiDashboard) — the company-tool
+   hero slide. A 3..6 cell board on --blue-50; each cell orchestrates
+   count-up + a scaleX meter fill + optional draw-in ring, all booting
+   together on entry (staggered). One red money metric max (tone:accent).
+----------------------------------------------------------- */
+.kpi {
+  position: absolute; inset: 240px 80px 116px 80px;
+  display: grid; grid-auto-rows: 1fr; gap: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));    /* default: 3-up */
+}
+.kpi[data-count="1"] { grid-template-columns: minmax(0, 1fr); }
+.kpi[data-count="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.kpi[data-count="4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.kpi[data-count="5"],
+.kpi[data-count="6"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.kpi__cell {
+  position: relative; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-6) var(--space-6) var(--space-5);
+  background: var(--bg-surface); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg); box-shadow: var(--elevation-2);
+}
+.kpi__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-width: 0; }
+.kpi__figure { display: flex; align-items: baseline; gap: var(--space-2); min-width: 0; }
+.kpi__value {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1; font-weight: 600;
+  font-size: var(--display-sm); line-height: 1; color: var(--fmnts-primary);
+}
+.kpi__unit {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1; font-weight: 600;
+  font-size: var(--h3); color: var(--fmnts-primary);
+}
+.kpi__label {
+  font-size: var(--body-md); line-height: var(--body-md-lh); color: var(--fg-muted);
+  margin-top: auto;                                    /* label sits low -> stat dominates */
+}
+
+/* meter — a thin track with a scaleX fill (grows once on entry) */
+.kpi__meter { height: 8px; border-radius: var(--radius-pill); background: var(--blue-100); overflow: hidden; }
+.kpi__meter-fill {
+  display: block; height: 100%; border-radius: inherit;
+  background: var(--fmnts-primary); transform-origin: left center;
+  transform: scaleX(var(--meter-scale, 1));            /* final composed state by default */
+}
+
+/* ring — a small corner draw-in arc */
+.kpi__ring { flex: 0 0 auto; width: 44px; height: 44px; }
+.kpi__ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.kpi__ring circle { fill: none; }
+.kpi__ring-track { stroke: var(--blue-100); stroke-width: 6; }
+.kpi__ring-arc {
+  stroke: var(--fmnts-primary); stroke-width: 6; stroke-linecap: round;
+  stroke-dasharray: 100 100;
+  stroke-dashoffset: calc(100 - var(--ring-drawn, 100));
+}
+
+/* the ONE red money metric — border keyline + red numeral (max one per surface) */
+.kpi__cell--accent { border-color: var(--fmnts-secondary-50); }
+.kpi__cell--accent .kpi__value,
+.kpi__cell--accent .kpi__unit { color: var(--fmnts-secondary); }
+.kpi__cell--accent .kpi__meter-fill { background: var(--fmnts-secondary); }
+.kpi__cell--accent .kpi__ring-arc { stroke: var(--fmnts-secondary); }
+
+/* ---- entrance motion (compositor-only; gated to the present live slide) ---- */
+@keyframes kpi-meter-fill { from { transform: scaleX(0); } }
+@keyframes kpi-ring-draw  { from { stroke-dashoffset: 100; } }
+.reveal .slides section.present .kpi__meter-fill {
+  animation: kpi-meter-fill var(--dur-count, 900ms) var(--ease-orbit) both;
+  animation-delay: calc(var(--anim-step, 0) * var(--stagger-tight, 45ms));
+}
+.reveal .slides section.present .kpi__ring-arc {
+  animation: kpi-ring-draw var(--dur-draw, 1400ms) var(--ease-orbit) 200ms both;
+}
+
+/* ---- degradation guards: final visible state under reduced-motion/print/peek ---- */
+@media (prefers-reduced-motion: reduce) {
+  .reveal .slides section.present .kpi__meter-fill,
+  .reveal .slides section.present .kpi__ring-arc { animation: none !important; }
+  .kpi__meter-fill { transform: scaleX(var(--meter-scale, 1)) !important; }
+  .kpi__ring-arc { stroke-dashoffset: calc(100 - var(--ring-drawn, 100)) !important; }
+}
+body.print-pdf .kpi__meter-fill,
+body.print-pdf .kpi__ring-arc,
+body.is-peek .kpi__meter-fill,
+body.is-peek .kpi__ring-arc { animation: none !important; }
+body.print-pdf .kpi__meter-fill, body.is-peek .kpi__meter-fill { transform: scaleX(var(--meter-scale, 1)) !important; }
+body.print-pdf .kpi__ring-arc, body.is-peek .kpi__ring-arc { stroke-dashoffset: calc(100 - var(--ring-drawn, 100)) !important; }
+
+/* rides above the ghost index like the other content regions */
+.slide .kpi { position: absolute; z-index: 1; }
+
+/* -----------------------------------------------------------
+   13.3 COMPARISON (archetype: comparison) — two columns with a
+   central drawn divider; per-row score bars (scaleX fill). Optional
+   a/b headers. Declarative only (no viewer slider this wave). One red
+   column accent max.
+----------------------------------------------------------- */
+.compare {
+  position: absolute; inset: 244px 80px 116px 80px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 2px minmax(0, 1fr);
+  column-gap: 44px; align-items: start;
+}
+.compare__col { min-width: 0; display: flex; flex-direction: column; gap: var(--space-4); }
+.compare__col-head { padding-bottom: var(--space-3); border-bottom: 1px solid var(--border-subtle); }
+.compare__col-title {
+  font-family: var(--font-body); font-weight: 600; text-transform: uppercase;
+  font-size: var(--overline); letter-spacing: 0.22em; color: var(--fg-muted);
+}
+.compare__rows { display: flex; flex-direction: column; gap: var(--space-4); list-style: none; margin: 0; padding: 0; }
+.compare__row { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.compare__row-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); min-width: 0; }
+.compare__label { font-size: var(--body-md); line-height: var(--body-md-lh); color: var(--fg-default); }
+.compare__value {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1; font-weight: 600;
+  font-size: var(--body-md); color: var(--fmnts-primary); flex: 0 0 auto;
+}
+
+/* per-row score bar (scaleX fill, grows on entry) */
+.compare__bar { height: 8px; border-radius: var(--radius-pill); background: var(--blue-100); overflow: hidden; }
+.compare__bar-fill {
+  display: block; height: 100%; border-radius: inherit;
+  background: var(--fmnts-primary); transform-origin: left center;
+  transform: scaleX(var(--bar-scale, 1));              /* final composed state by default */
+}
+
+/* central divider — a hairline that draws top -> bottom on entry */
+.compare__divider { grid-column: 2; align-self: stretch; width: 2px; height: 100%; }
+.compare__divider svg { width: 2px; height: 100%; display: block; overflow: visible; }
+.compare__divider-line {
+  stroke: var(--border-default); stroke-width: 2;
+  stroke-dasharray: 100 100; stroke-dashoffset: 0;     /* final drawn state by default */
+}
+
+/* the ONE red column accent — keyline down the column + red bars/values (max one) */
+.compare__col--accent .compare__col-head { border-bottom-color: var(--fmnts-secondary-50); }
+.compare__col--accent .compare__col-title { color: var(--fmnts-secondary); }
+.compare__col--accent .compare__value { color: var(--fmnts-secondary); }
+.compare__col--accent .compare__bar-fill { background: var(--fmnts-secondary); }
+
+/* ---- entrance motion (compositor-only; gated to the present live slide) ---- */
+@keyframes compare-bar-fill { from { transform: scaleX(0); } }
+@keyframes compare-divider-draw { from { stroke-dashoffset: 100; } }
+.reveal .slides section.present .compare__bar-fill {
+  animation: compare-bar-fill var(--dur-count, 900ms) var(--ease-orbit) both;
+  animation-delay: calc(var(--anim-step, 0) * var(--stagger-tight, 45ms));
+}
+.reveal .slides section.present .compare__divider-line {
+  animation: compare-divider-draw var(--dur-draw, 1400ms) var(--ease-orbit) both;
+}
+
+/* ---- degradation guards: final visible state under reduced-motion/print/peek ---- */
+@media (prefers-reduced-motion: reduce) {
+  .reveal .slides section.present .compare__bar-fill,
+  .reveal .slides section.present .compare__divider-line { animation: none !important; }
+  .compare__bar-fill { transform: scaleX(var(--bar-scale, 1)) !important; }
+  .compare__divider-line { stroke-dashoffset: 0 !important; }
+}
+body.print-pdf .compare__bar-fill,
+body.print-pdf .compare__divider-line,
+body.is-peek .compare__bar-fill,
+body.is-peek .compare__divider-line { animation: none !important; }
+body.print-pdf .compare__bar-fill, body.is-peek .compare__bar-fill { transform: scaleX(var(--bar-scale, 1)) !important; }
+body.print-pdf .compare__divider-line, body.is-peek .compare__divider-line { stroke-dashoffset: 0 !important; }
+
+/* rides above the ghost index like the other content regions */
+.slide .compare { position: absolute; z-index: 1; }
+
+/* -----------------------------------------------------------
+   13.4 AGENDA (archetype: agenda) — numbered section list / nav map.
+   Sits in the shared .content band; each row's data-id pairs it
+   with a sectionDivider for the reveal auto-animate FLIP morph.
+   Entrance = §6 .anim fade-up only (no bespoke entrance keyframes).
+----------------------------------------------------------- */
+.agenda { position: absolute; inset: 248px 80px 128px 80px; display: flex; align-items: center; }
+.agenda__list { width: 100%; display: flex; flex-direction: column; gap: var(--space-5); }
+.agenda__row {
+  display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: baseline;
+  column-gap: var(--space-6); position: relative; padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.agenda__row:last-child { border-bottom: 0; }
+.agenda__num {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1; font-weight: 600;
+  font-size: var(--h1); line-height: 1; color: var(--fmnts-primary-50); letter-spacing: -0.02em;
+}
+.agenda__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.agenda__title {
+  font-family: var(--font-display); font-weight: 600;
+  font-size: var(--h2); line-height: var(--h2-lh); letter-spacing: -0.01em; color: var(--fg-default);
+}
+.agenda__note { font-size: var(--body-md); line-height: var(--body-md-lh); color: var(--fg-muted); }
+/* trailing hairline tick that reads as a route stop; grows from the row on hover */
+.agenda__rule { align-self: center; width: 40px; height: 2px; background: var(--fmnts-primary-25);
+  border-radius: var(--radius-pill); transform-origin: right center;
+  transition: transform var(--dur-normal) var(--ease-orbit), background var(--dur-normal) var(--ease-orbit); }
+.agenda__row:hover .agenda__rule { transform: scaleX(1.6); background: var(--fmnts-primary); }
+/* the agenda rides above the ghost numeral like the other content regions */
+.slide .agenda { position: absolute; z-index: 1; }
+
+/* AGENDA degradation guards — the hover tick is the only bespoke motion; freeze
+   it flat for reduced-motion (rows inherit the §6/§8/§10 .anim static gates). */
+@media (prefers-reduced-motion: reduce) {
+  .agenda__rule { transition: none !important; }
+  .agenda__row:hover .agenda__rule { transform: none !important; }
+}
+
+/* -----------------------------------------------------------
+   13.5 SECTION DIVIDER (archetype: sectionDivider) — full-bleed BLUE
+   interstitial. FULL_BLEED (owns its whole body; no shared chrome).
+   Giant ghost section number, title as headline, an orbital ring
+   that re-draws on entry. The title carries data-id="agenda-<number>"
+   so a paired agenda line FLIP-morphs into it (reveal auto-animate).
+   Ring draw copies the §4 bookend stroke-dashoffset contract.
+----------------------------------------------------------- */
+.secdiv { position: absolute; left: 80px; right: 200px; top: 296px; z-index: 1; }
+.secdiv__index {
+  display: block; font-family: var(--font-body); font-weight: 600; text-transform: uppercase;
+  font-size: var(--overline); line-height: var(--overline-lh); letter-spacing: 0.30em;
+  color: rgba(255,255,255,0.70); margin-bottom: var(--space-4);
+}
+.secdiv__title {
+  font-family: var(--font-display); font-weight: 600;
+  font-size: var(--display-lg); line-height: var(--display-lg-lh); letter-spacing: -0.02em;
+  color: var(--fg-inverse); max-width: 940px;
+}
+.secdiv__sub {
+  margin-top: var(--space-5); font-size: var(--body-lg); line-height: var(--body-lg-lh);
+  color: rgba(255,255,255,0.80); max-width: 720px;
+}
+/* giant ghost section numeral, bleeding off bottom-right (echoes §7 signature) */
+.secdiv__ghost {
+  position: absolute; right: 40px; bottom: -60px; z-index: 0;
+  transform: translateY(12%);
+  font-family: var(--font-display); font-feature-settings: "tnum" 1; font-weight: 700;
+  font-size: 460px; line-height: 1; letter-spacing: -0.04em;
+  color: var(--neutral-0); opacity: 0.08; pointer-events: none; user-select: none;
+}
+/* the orbital ring — thin arcs sweeping the top-right, re-drawn on entry */
+.secdiv__ring {
+  position: absolute; right: -220px; top: -240px; width: 820px; height: 820px;
+  z-index: 0; overflow: visible; pointer-events: none;
+}
+.secdiv__ring circle { fill: none; }
+.secdiv__ring-1 { stroke: rgba(255,255,255,0.34); stroke-width: 1.5; }
+.secdiv__ring-2 { stroke: rgba(255,255,255,0.16); stroke-width: 1.25; }
+.secdiv__ring-dot { fill: rgba(255,255,255,0.95); stroke: none; }
+
+/* Ring re-draw on entry (copies §4 bookend: pathLength=100 normalizes both
+   radii to ONE dash keyframe). Runs only when present and entered via an
+   auto-animate pairing — so a matched agenda->divider morph travels the ring
+   instead of re-drawing mid-flight. Default = final drawn (past/future/peek/
+   print). If you want the ring to also draw on plain (non-morph) entry, drop
+   the [data-auto-animate=""] attribute from these two selectors. */
+@keyframes secdiv-ring-draw {
+  from { stroke-dasharray: 100 100; stroke-dashoffset: 100; }
+  to   { stroke-dasharray: 100 100; stroke-dashoffset: 0; }
+}
+@keyframes secdiv-ring-dot-in { from { opacity: 0; } }
+.reveal .slides section[data-auto-animate=""].present .secdiv__ring-1,
+.reveal .slides section[data-auto-animate=""].present .secdiv__ring-2 {
+  animation: secdiv-ring-draw 1100ms var(--ease-orbit) both;
+}
+.reveal .slides section[data-auto-animate=""].present .secdiv__ring-2 { animation-delay: 120ms; }
+.reveal .slides section[data-auto-animate=""].present .secdiv__ring-dot {
+  animation: secdiv-ring-dot-in var(--dur-normal) var(--ease-orbit) 1100ms both;
+}
+
+/* SECTION DIVIDER degradation guards — final drawn/visible state everywhere
+   (mirrors §4/§6/§8/§10 exactly). */
+@media (prefers-reduced-motion: reduce) {
+  .secdiv__ring circle { animation: none !important; stroke-dashoffset: 0 !important; }
+  .secdiv__ring-dot { opacity: 1 !important; }
+}
+body.print-pdf .secdiv__ring circle { animation: none !important; stroke-dashoffset: 0 !important; }
+body.print-pdf .secdiv__ring-dot { opacity: 1 !important; }
+body.is-peek .secdiv__ring circle { animation: none !important; stroke-dashoffset: 0 !important; }
+body.is-peek .secdiv__ring-dot { opacity: 1 !important; }
+
+/* -----------------------------------------------------------
+   13.6 TIMELINE (archetype: timeline) — a spine that self-draws end to
+   end (stroke-dashoffset), milestone nodes fading up in sequence as
+   the draw passes them. Horizontal (default) or vertical. Sits in the
+   shared .content band. Spine draw copies the §4 bookend contract
+   (pathLength=100 -> ONE keyframe for either orientation).
+----------------------------------------------------------- */
+.timeline { position: absolute; inset: 260px 80px 120px 80px; }
+.timeline__spine { position: absolute; z-index: 0; overflow: visible; pointer-events: none; }
+.timeline__spine line { fill: none; stroke: var(--fmnts-primary-25); stroke-width: 2; }
+.timeline__track { position: relative; z-index: 1; height: 100%; display: grid; }
+
+/* --- horizontal: spine across the top band, nodes spread L->R --- */
+.timeline--horizontal .timeline__spine { left: 0; right: 0; top: 15px; height: 2px; width: 100%; }
+.timeline--horizontal .timeline__track {
+  grid-auto-flow: column; grid-auto-columns: 1fr; align-items: start; column-gap: var(--space-4);
+}
+.timeline--horizontal .timeline__node { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); min-width: 0; }
+
+/* --- vertical: spine down the left rail, nodes stack top->bottom --- */
+.timeline--vertical .timeline__spine { left: 15px; top: 0; bottom: 0; width: 2px; height: 100%; }
+.timeline--vertical .timeline__track {
+  grid-auto-flow: row; grid-auto-rows: 1fr; align-content: stretch; row-gap: var(--space-4);
+}
+.timeline--vertical .timeline__node { display: grid; grid-template-columns: 32px minmax(0, 1fr); align-items: start; column-gap: var(--space-5); }
+
+/* the milestone node — dot on the spine + a card of when/title/note */
+.timeline__dot {
+  width: 14px; height: 14px; border-radius: 50%; flex: 0 0 auto;
+  background: var(--bg-surface); border: 2px solid var(--fmnts-primary); box-shadow: var(--elevation-1);
+}
+.timeline--vertical .timeline__dot { margin-left: 8px; }
+.timeline__card { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.timeline__when {
+  font-family: var(--font-display); font-feature-settings: "tnum" 1; font-weight: 600;
+  font-size: var(--body-xs); color: var(--fmnts-primary);
+  background: var(--blue-100); border-radius: var(--radius-pill); padding: 2px 10px; align-self: flex-start;
+}
+.timeline__title { font-family: var(--font-display); font-weight: 600; font-size: var(--h5); line-height: var(--h5-lh); color: var(--fg-default); }
+.timeline__note { font-size: var(--body-sm); line-height: var(--body-sm-lh); color: var(--fg-muted); }
+
+/* state semantics — done (filled), active (glow ring), next (subtle) */
+.timeline__node--done .timeline__dot   { background: var(--fmnts-primary); border-color: var(--fmnts-primary); }
+.timeline__node--active .timeline__dot  { border-color: var(--fmnts-primary); box-shadow: 0 0 0 4px rgba(0,116,200,0.18); }
+.timeline__node--active .timeline__when { color: var(--fg-inverse); background: var(--fmnts-primary); }
+.timeline__node--next .timeline__dot   { border-color: var(--fg-subtle); }
+.timeline__node--next .timeline__when  { color: var(--fg-muted); background: var(--neutral-100); }
+.timeline__node--next .timeline__title { color: var(--fg-muted); }
+/* the timeline rides above the ghost numeral like the other content regions */
+.slide .timeline { position: absolute; z-index: 1; }
+
+/* Spine self-draw on entry (pathLength=100 -> ONE keyframe, both orientations).
+   Runs only on the present live slide; default = fully drawn (past/future/peek/
+   print). preserveAspectRatio=none stretches the normalized line to the box. */
+@keyframes timeline-spine-draw {
+  from { stroke-dasharray: 100 100; stroke-dashoffset: 100; }
+  to   { stroke-dasharray: 100 100; stroke-dashoffset: 0; }
+}
+.reveal .slides section.present .timeline__spine line {
+  animation: timeline-spine-draw var(--dur-draw) var(--ease-orbit) both;
+}
+
+/* TIMELINE degradation guards — spine fully drawn; every milestone fully
+   visible on a static page (mirrors §6/§8/§10). Nodes inherit the §6 .anim gate. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal .slides section.present .timeline__spine line { animation: none !important; stroke-dashoffset: 0 !important; }
+}
+body.print-pdf .timeline__spine line { animation: none !important; stroke-dashoffset: 0 !important; }
+body.is-peek .timeline__spine line { animation: none !important; stroke-dashoffset: 0 !important; }
+
+/* -----------------------------------------------------------
+   13.7 PULL QUOTE (archetype: pullQuote) — oversized editorial quote
+   (Chillax), stroke-drawn quotation mark, word-groups fading up in
+   sequence. Optional attribution + optional portrait (deviceFrame/
+   assetFrame) revealed with a clip-path wipe. Sits in the shared
+   .content band. Mark draw copies the §4 bookend contract.
+----------------------------------------------------------- */
+.pquote {
+  position: absolute; inset: 244px 80px 116px 80px; margin: 0;
+  display: grid; grid-template-columns: 1fr; align-items: center;
+}
+.pquote--portrait { grid-template-columns: minmax(0, 6.4fr) minmax(0, 3.6fr); column-gap: 56px; }
+.pquote__col { position: relative; min-width: 0; max-width: 960px; }
+/* the opening quotation glyph — stroke-drawn on entry, sits behind the text */
+.pquote__mark {
+  position: absolute; left: -8px; top: -56px; width: 128px; height: 102px; z-index: 0;
+  overflow: visible; pointer-events: none;
+}
+.pquote__mark path {
+  fill: none; stroke: var(--fmnts-primary-25); stroke-width: 3;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.slide--blue .pquote__mark path { stroke: rgba(255,255,255,0.34); }
+.pquote__body {
+  position: relative; z-index: 1; margin: 0;
+  font-family: var(--font-display); font-weight: 600;
+  font-size: var(--display-sm); line-height: var(--display-sm-lh); letter-spacing: -0.01em;
+  color: var(--fg-default);
+}
+.slide--blue .pquote__body { color: var(--fg-inverse); }
+.pquote__group { display: inline; }
+/* attribution — a short rule then cite/role, mirrors the cover rule language */
+.pquote__attr { display: flex; align-items: center; gap: var(--space-4); margin-top: var(--space-8); }
+.pquote__attr-rule { width: 48px; height: 2px; background: var(--fmnts-primary); border-radius: var(--radius-pill); flex: 0 0 auto; }
+.pquote__attr-body { display: flex; flex-direction: column; gap: 1px; }
+.pquote__cite { font-family: var(--font-body); font-weight: 700; font-size: var(--body-lg); color: var(--fg-default); }
+.slide--blue .pquote__cite { color: var(--fg-inverse); }
+.pquote__role { font-size: var(--body-sm); line-height: var(--body-sm-lh); color: var(--fg-muted); }
+.slide--blue .pquote__role { color: rgba(255,255,255,0.75); }
+
+/* portrait — framed (never bare) media, revealed with a clip-path wipe */
+.pquote__portrait { min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; height: 100%; }
+.pquote__wipe { display: block; width: 100%; }
+.reveal .pquote__wipe .device-frame--phone { height: auto; max-height: 360px; width: auto; max-width: 100%; margin: 0 auto; }
+.reveal .pquote__wipe .asset-frame { max-height: 360px; width: auto; max-width: 100%; margin: 0 auto; box-shadow: var(--elevation-3); }
+
+/* Opening-mark stroke-draw + portrait wipe — play only on the present live
+   slide; defaults are the final visible state. Word-groups use the §6 .anim gate. */
+@keyframes pquote-mark-draw {
+  from { stroke-dasharray: 100 100; stroke-dashoffset: 100; }
+  to   { stroke-dasharray: 100 100; stroke-dashoffset: 0; }
+}
+.reveal .slides section.present .pquote__mark path {
+  stroke-dasharray: 100 100;
+  animation: pquote-mark-draw var(--dur-draw) var(--ease-orbit) both;
+}
+/* clip-path wipe (compositor-safe): the portrait reveals L->R once on entry */
+@keyframes pquote-wipe {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+.reveal .slides section.present .pquote__wipe {
+  animation: pquote-wipe var(--dur-slower) var(--ease-orbit) 240ms both;
+}
+/* the pull-quote rides above the ghost numeral like the other content regions */
+.slide .pquote { position: absolute; z-index: 1; }
+
+/* PULL QUOTE degradation guards — mark fully drawn, wipe fully open, every
+   word-group visible on a static page (mirrors §6/§8/§10/§11). */
+@media (prefers-reduced-motion: reduce) {
+  .reveal .slides section.present .pquote__mark path { animation: none !important; stroke-dashoffset: 0 !important; }
+  .reveal .slides section.present .pquote__wipe { animation: none !important; clip-path: none !important; }
+}
+body.print-pdf .pquote__mark path { animation: none !important; stroke-dashoffset: 0 !important; }
+body.print-pdf .pquote__wipe { animation: none !important; clip-path: none !important; }
+body.is-peek .pquote__mark path { animation: none !important; stroke-dashoffset: 0 !important; }
+body.is-peek .pquote__wipe { animation: none !important; clip-path: none !important; }
+
+/* -----------------------------------------------------------
+   13.8 LOGO-WALL (logo-wall.js) — partner/charity grid.
+   Stagger-settle entrance (shared .anim); hover SPOTLIGHT dims the
+   rest (opacity only, compositor-safe). Mixed logo shapes coexist via
+   per-cell contain frames. Sits above the ghost-index (z-index:1).
+----------------------------------------------------------- */
+.slide .logowall { position: absolute; inset: 256px 80px 116px 80px; z-index: 1;
+  display: flex; flex-direction: column; justify-content: center; }
+.logowall__grid {
+  display: grid; gap: var(--space-5);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-content: center;
+}
+/* denser packs breathe wider so 5..12 marks fill the band without a lonely row */
+.logowall[data-count="5"] .logowall__grid,
+.logowall[data-count="6"] .logowall__grid,
+.logowall[data-count="9"] .logowall__grid,
+.logowall[data-count="10"] .logowall__grid,
+.logowall[data-count="11"] .logowall__grid,
+.logowall[data-count="12"] .logowall__grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+.ratio-logo-cell { aspect-ratio: 16 / 9; }
+
+.logowall-tile { display: flex; flex-direction: column; gap: var(--space-2); margin: 0;
+  transition: opacity var(--dur-normal) var(--ease-orbit); }
+.logowall-tile .asset-frame {
+  background: var(--bg-surface);            /* white card so logos read on the muted field */
+  box-shadow: var(--elevation-2);
+}
+.logowall-tile .asset-frame > img {
+  border: 0; padding: var(--space-5);       /* generous mat so contain never crowds an edge */
+  background: var(--bg-surface);
+}
+.logowall-tile__label {
+  font-family: var(--font-body); font-size: var(--body-xs); line-height: var(--body-xs-lh);
+  letter-spacing: 0.02em; color: var(--fg-subtle); text-align: center;
+}
+/* HOVER SPOTLIGHT — dim the wall, restore the hovered tile (opacity only). */
+.logowall__grid:hover .logowall-tile { opacity: 0.34; }
+.logowall__grid:hover .logowall-tile:hover { opacity: 1; }
+.logowall__grid:hover .logowall-tile:hover .asset-frame { box-shadow: var(--elevation-3); }
+
+/* degradation twins — mirror §6/§8 exactly: finished, full-opacity wall. */
+@media (prefers-reduced-motion: reduce) {
+  .logowall-tile { transition: none !important; }
+  .logowall__grid:hover .logowall-tile { opacity: 1; }
+}
+body.print-pdf .logowall-tile,
+body.is-peek .logowall-tile { opacity: 1 !important; transition: none !important; }
+body.print-pdf .logowall__grid:hover .logowall-tile,
+body.is-peek .logowall__grid:hover .logowall-tile { opacity: 1 !important; }
+
+/* -----------------------------------------------------------
+   13.9 IMAGE-FULL-BLEED (image-full-bleed.js) — dramatic edge-to-edge
+   photo. Sanctioned cover crop (.asset-frame--cover contract), a
+   clip-path WIPE entrance, and a bottom scrim carrying eyebrow /
+   title / caption. Owns the whole content region (fills chrome band
+   fully bleeding L/R/bottom past the safe margin for drama).
+----------------------------------------------------------- */
+.slide .fullbleed { position: absolute; inset: 0; z-index: 1; margin: 0;
+  overflow: hidden; }
+.ratio-fullbleed { aspect-ratio: auto; }
+.fullbleed__media { position: absolute; inset: 0; }
+/* stretch the frame to the section box; the img covers it (never squished). */
+.fullbleed__media .asset-frame {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  border-radius: 0; box-shadow: none; background: var(--bg-inverse);
+  aspect-ratio: auto;
+}
+.reveal .fullbleed__media .asset-frame > img {
+  width: 100%; height: 100%; object-fit: cover; border: 0; border-radius: 0;
+  /* subtle Ken-Burns settle from the wipe (transform only) */
+  transform: scale(1.06);
+  transition: transform 1400ms var(--ease-orbit);
+}
+.fullbleed[data-focal="top"] .asset-frame > img { object-position: center top; }
+.fullbleed[data-focal="center"] .asset-frame > img { object-position: center; }
+.fullbleed[data-focal="bottom"] .asset-frame > img { object-position: center bottom; }
+
+/* bottom scrim → legible titles over any photo (ink gradient, no hard edge). */
+.fullbleed__scrim {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  padding: 96px 80px 40px;
+  background: linear-gradient(to top, rgba(30,42,51,0.86) 0%, rgba(30,42,51,0.52) 46%, rgba(30,42,51,0) 100%);
+  color: var(--fg-inverse);
+  display: flex; flex-direction: column; gap: var(--space-2);
+}
+.fullbleed__eyebrow {
+  font-family: var(--font-body); font-weight: 600; text-transform: uppercase;
+  font-size: var(--overline); line-height: var(--overline-lh); letter-spacing: 0.30em;
+  color: var(--fmnts-primary-25);
+}
+.fullbleed__title {
+  font-family: var(--font-body); font-weight: 700;
+  font-size: var(--h2); line-height: var(--h2-lh); letter-spacing: -0.01em;
+  color: var(--fg-inverse); max-width: 900px;
+}
+.fullbleed__caption {
+  font-size: var(--body-md); line-height: var(--body-md-lh); color: rgba(255,255,255,0.82);
+  max-width: 720px;
+}
+.fullbleed__credit {
+  margin-top: var(--space-2);
+  font-size: var(--body-xs); line-height: var(--body-xs-lh); letter-spacing: 0.04em;
+  color: rgba(255,255,255,0.55);
+}
+.fullbleed--empty { background: var(--blue-50); }
+
+/* CLIP-PATH WIPE — reveal L->R on entry; only plays on the present live slide.
+   Default (past/future/peek/print) = fully revealed. */
+@keyframes fullbleed-wipe {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+.fullbleed__media { clip-path: inset(0 0 0 0); }
+.reveal .slides section.present .fullbleed__media {
+  animation: fullbleed-wipe var(--dur-draw) var(--ease-orbit) both;
+}
+.reveal .slides section.present .fullbleed__media .asset-frame > img { transform: scale(1); }
+
+/* degradation twins — mirror §6/§8: instant, fully-revealed, no zoom. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal .slides section.present .fullbleed__media { animation: none !important; clip-path: inset(0) !important; }
+  .reveal .fullbleed__media .asset-frame > img { transform: none !important; transition: none !important; }
+}
+body.print-pdf .fullbleed__media,
+body.is-peek .fullbleed__media { animation: none !important; clip-path: inset(0) !important; }
+body.print-pdf .fullbleed__media .asset-frame > img,
+body.is-peek .fullbleed__media .asset-frame > img { transform: none !important; transition: none !important; }
+
+/* -----------------------------------------------------------
+   13.10 MAP (map.js) — stylised AT/CH/EU outline; routes DRAW via
+   stroke-dashoffset, pins fade-up. Coordinates are 0..100 viewBox
+   percentages; the pin overlay is positioned in the same percent
+   space over the SVG. On blue chrome by default (routes read light).
+----------------------------------------------------------- */
+.slide .fmap { position: absolute; inset: 248px 80px 116px 80px; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-4); }
+.fmap__stage { position: relative; width: min(100%, 760px); aspect-ratio: 16 / 10; }
+.fmap__svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.fmap__pins { position: absolute; inset: 0; }
+
+/* outline — a soft filled silhouette with a hairline stroke that draws in. */
+.fmap__outline {
+  fill: rgba(255,255,255,0.08);
+  stroke: rgba(255,255,255,0.55); stroke-width: 0.6;
+  stroke-linejoin: round; vector-effect: non-scaling-stroke;
+}
+.slide--light .fmap__outline, .slide--muted .fmap__outline {
+  fill: var(--blue-100); stroke: var(--fmnts-primary-50);
+}
+/* routes — brand-blue arcs (light on blue chrome) that sweep between pins. */
+.fmap__route {
+  fill: none; stroke: var(--fmnts-primary-25); stroke-width: 1;
+  stroke-linecap: round; vector-effect: non-scaling-stroke;
+}
+.slide--light .fmap__route, .slide--muted .fmap__route { stroke: var(--fmnts-primary); }
+
+/* pins — real-type labels in the percent overlay (crisper than <text>). */
+.fmap-pin { position: absolute; transform: translate(-50%, -50%);
+  display: flex; align-items: center; gap: var(--space-2); white-space: nowrap; }
+.fmap-pin__dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--fmnts-primary); box-shadow: 0 0 0 4px rgba(0,116,200,0.22);
+  flex: 0 0 auto;
+}
+.slide--blue .fmap-pin__dot { background: var(--neutral-0); box-shadow: 0 0 0 4px rgba(255,255,255,0.28); }
+.fmap-pin__label {
+  font-family: var(--font-body); font-weight: 600;
+  font-size: var(--body-sm); line-height: 1; letter-spacing: 0.01em;
+  color: var(--fg-inverse);
+}
+.slide--light .fmap-pin__label, .slide--muted .fmap-pin__label { color: var(--fg-default); }
+/* the ONE red stopper (max one per surface). */
+.fmap-pin--accent .fmap-pin__dot { background: var(--fmnts-secondary); box-shadow: 0 0 0 4px rgba(224,59,80,0.24); }
+.fmap__caption {
+  font-size: var(--body-sm); line-height: var(--body-sm-lh); color: rgba(255,255,255,0.72); text-align: center;
+}
+.slide--light .fmap__caption, .slide--muted .fmap__caption { color: var(--fg-muted); }
+
+/* DRAW-IN — outline first, then routes sweep staggered; only on the present
+   live slide. Default (past/future/peek/print) = fully drawn. */
+@keyframes fmap-draw {
+  from { stroke-dasharray: 100 100; stroke-dashoffset: 100; }
+  to   { stroke-dasharray: 100 100; stroke-dashoffset: 0; }
+}
+@keyframes fmap-pulse {
+  0%   { box-shadow: 0 0 0 4px rgba(224,59,80,0.24), 0 0 0 4px rgba(224,59,80,0.4); }
+  70%  { box-shadow: 0 0 0 4px rgba(224,59,80,0.24), 0 0 0 16px rgba(224,59,80,0); }
+  100% { box-shadow: 0 0 0 4px rgba(224,59,80,0.24), 0 0 0 16px rgba(224,59,80,0); }
+}
+.reveal .slides section.present .fmap__outline {
+  animation: fmap-draw var(--dur-draw) var(--ease-orbit) both;
+}
+.reveal .slides section.present .fmap__route {
+  animation: fmap-draw var(--dur-slower) var(--ease-orbit) both;
+  animation-delay: calc(700ms + var(--route-step, 0) * 180ms);   /* trail the outline, ripple */
+}
+.reveal .slides section.present .fmap-pin--accent .fmap-pin__dot {
+  animation: fmap-pulse 1600ms var(--ease-orbit) 1400ms 1 both;
+}
+
+/* degradation twins — mirror §6/§8/§12: finished, fully-drawn, no pulse. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal .slides section.present .fmap__outline,
+  .reveal .slides section.present .fmap__route { animation: none !important; stroke-dashoffset: 0 !important; }
+  .reveal .slides section.present .fmap-pin--accent .fmap-pin__dot { animation: none !important; }
+}
+body.print-pdf .fmap__outline, body.print-pdf .fmap__route,
+body.is-peek .fmap__outline, body.is-peek .fmap__route { animation: none !important; stroke-dashoffset: 0 !important; }
+body.print-pdf .fmap-pin--accent .fmap-pin__dot,
+body.is-peek .fmap-pin--accent .fmap-pin__dot { animation: none !important; }

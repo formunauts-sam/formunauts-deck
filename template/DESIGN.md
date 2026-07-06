@@ -101,9 +101,19 @@ A slide inherits this `chrome` when it does not set one. Only `light` / `muted`
 | `bentoBoard` | `muted` |
 | `statusBoard` | `muted` (deprecated) |
 | `poll` | `muted` |
+| `bigStat` | `light` |
+| `kpiDashboard` | `muted` |
+| `comparison` | `light` |
+| `agenda` | `light` |
+| `sectionDivider` | `blue` |
+| `timeline` | `light` |
+| `pullQuote` | `muted` |
+| `logoWall` | `muted` |
+| `imageFullBleed` | `muted` |
+| `map` | `blue` |
 
-`cover` and `closing` are full-bleed: they own their whole section body and do
-not receive the shared eyebrow/headline/lead chrome.
+`cover`, `closing`, and `sectionDivider` are full-bleed: they own their whole
+section body and do not receive the shared eyebrow/headline/lead chrome.
 
 ---
 
@@ -268,6 +278,165 @@ is the vote token the authority tallies, so it must be stable and ASCII.
 Motion and live counts are the chrome's job: the renderer draws the static board
 (bars at 0); the deck host paints results as votes arrive. In print/peek the board
 reads correctly as an un-voted poll.
+
+### bigStat (`bigStat.js`)
+
+The money-number slide. ONE hero Chillax numeral (counts up) with a unit and a
+line of context, plus an optional supporting sub-stat and a thin draw-in accent
+(sparkbar or ring). The numeral dominates by scale contrast. Chrome default
+`light`.
+
+| Field | Type | Required | Renders |
+|-------|------|----------|---------|
+| `value` | string \| number | yes | Hero figure. Clean integer counts up; decimal/string renders literally. |
+| `unit` | string | no | Unit beside the numeral, e.g. `%`, `EUR`. |
+| `label` | string | yes | One-line meaning of the number. |
+| `context` | string | no | Second context line under the label. |
+| `sub` | `{ value, label }` | no | Supporting sub-stat; numeric `value` counts up. |
+| `spark` | number[] (<=12) | no | Thin sparkbar, drawn in, normalized to max. Wins over `ring`. |
+| `ring` | number 0..1 | no | Thin draw-in accent ring; the arc sweep. Ignored if `spark` set. |
+
+### kpiDashboard (`kpiDashboard.js`)
+
+The company-tool hero slide. A 3..6 cell metric board where each cell orchestrates
+a count-up numeral, an optional `scaleX` meter fill, and an optional draw-in ring,
+all booting together on entry (staggered). Chrome default `muted`.
+
+| Field | Type | Required | Renders |
+|-------|------|----------|---------|
+| `metrics` | array of metric (1..6) | yes | The cells. |
+| `metrics[].value` | string \| number | yes | Cell figure; clean integer counts up. |
+| `metrics[].unit` | string | no | Unit beside the numeral, e.g. `%`. |
+| `metrics[].label` | string | yes | What the cell measures. |
+| `metrics[].meter` | number 0..1 | no | Meter fill (scaleX). |
+| `metrics[].ring` | number 0..1 | no | Draw-in ring (arc sweep). |
+| `metrics[].tone` | `accent` | no | The one red money metric. Only the first accent cell is honoured. |
+
+### comparison (`comparison.js`)
+
+Two columns with a central drawn divider; each row an optional score bar
+(`scaleX` fill). Declarative only (no viewer slider in this wave). Chrome default
+`light`. An optional column-level `tone:"accent"` is the one red stopper (side `a`
+wins when both ask).
+
+| Field | Type | Required | Renders |
+|-------|------|----------|---------|
+| `a` | comparison column | yes | Left column. |
+| `b` | comparison column | yes | Right column. |
+| `a.title` / `b.title` | string | no | Column header. |
+| `a.tone` / `b.tone` | `accent` | no | The one red column. `a` wins if both ask. |
+| `a.items[]` / `b.items[]` | string \| `{ label, score?, value? }` | no | Rows. `score` (0..1) draws a bar; `value` shows a figure. |
+
+A comparison column is `{ title?, tone?, items[] }`; `items[]` is a string or
+`{ label, score?, value? }`.
+
+### agenda (`agenda.js`)
+
+A numbered section list that doubles as a nav map. Each line carries a stable
+morph id so it can FLIP-animate into the matching `sectionDivider` (pair them
+by number). Standalone-renderable; the pairing is opt-in. Chrome default `light`.
+
+| Field | Type | Required | Renders |
+|-------|------|----------|---------|
+| `items` | array of string or `{ n?, title, note? }` | no | The section lines. |
+| `items[].n` | string or number | no | Section number (defaults to position). The morph anchor: pairs with a `sectionDivider` whose `number` matches, via `data-id="agenda-<n>"`. |
+| `items[].title` | string | no | Section title. |
+| `items[].note` | string | no | Small note under the title. |
+
+Morph: to get the agenda-line -> section-divider FLIP, put a `sectionDivider`
+with the same `number` later in the deck; render.js pairs them with reveal
+auto-animate. Without a partner slide the agenda still renders correctly.
+
+### sectionDivider (`sectionDivider.js`), full-bleed
+
+A full-bleed BLUE interstitial that opens a section: giant ghost section
+number, the title as a large headline, an orbital ring that re-draws on entry.
+Owns its whole section body (like `cover`/`closing`) — no shared kicker/
+headline/lead chrome. Default chrome `blue`.
+
+| Field | Type | Required | Renders |
+|-------|------|----------|---------|
+| `number` | string or number | no | The section number; fills the ghost numeral and is the morph anchor (`data-id="agenda-<number>"`). |
+| `title` | string | no | Section title (large headline; the morph destination). |
+| `sub` | string | no | Optional sub-line. |
+
+Morph: place this after an `agenda` whose line has the same `n` as this
+`number`; render.js gives both slides `data-auto-animate` and the agenda line
+FLIPs across the gap into this title. Renders fine standalone.
+
+### timeline (`timeline.js`)
+
+A spine that self-draws end to end (stroke-dashoffset), milestone nodes fading
+up in sequence as the draw passes them. Horizontal (default) or vertical. Sits
+in the shared `.content` band. Chrome default `light`.
+
+| Field | Type | Required | Renders |
+|-------|------|----------|---------|
+| `orientation` | `horizontal` \| `vertical` | no | Spine direction (default `horizontal`). |
+| `milestones` | array of `{ when?, title, note?, state? }` | no | The nodes along the spine. |
+| `milestones[].when` | string | no | Datestamp tag (e.g. `"Q3"`). |
+| `milestones[].title` | string | no | Milestone title. |
+| `milestones[].note` | string | no | Small supporting note. |
+| `milestones[].state` | `done` \| `active` \| `next` | no | Dot styling (default `next`). |
+
+### pullQuote (`pullQuote.js`)
+
+An oversized editorial quote (Chillax), stroke-drawn quotation mark, word-
+groups fading up in sequence. Optional attribution and optional portrait
+(revealed with a clip-path wipe). Sits in the shared `.content` band. Chrome
+default `muted`.
+
+| Field | Type | Required | Renders |
+|-------|------|----------|---------|
+| `quote` | string | no | The quote body; rendered in clause-sized word-groups that fade up in sequence. |
+| `cite` | string | no | Attribution name. |
+| `role` | string | no | Attribution role/context. |
+| `portrait` | `{ kind?, file, device?, crop?, ratioClass?, alt? }` | no | Optional portrait, framed (never a bare `<img>`) and revealed with a clip-path wipe. `kind:"device"` (default) seats it in chrome; `kind:"asset"` mats it. |
+
+### logoWall (`logo-wall.js`)
+
+A partner / charity logo grid. Every mark mats in a contain frame so wordmarks,
+squares and lockups coexist without squishing. The grid stagger-settles on entry;
+hovering any tile spotlights it by dimming the rest (opacity only). Default
+chrome `muted`.
+
+| Field | Type | Required | Renders |
+|-------|------|----------|---------|
+| `logos` | array of `{ src, alt?, url? }` | no | The logo cells. `src` is the filename; `alt` the accessible label; `url` a small display-only caption under the mark. |
+
+### imageFullBleed (`image-full-bleed.js`)
+
+An edge-to-edge photograph that owns the whole section feel. The image is
+cover-cropped (never squished), revealed with a left-to-right clip-path wipe,
+and a bottom scrim carries an optional eyebrow / title / caption over it. Note
+the scrim titles (`title`, `caption`) are distinct from the shared chrome
+headline: for a pure photo statement, leave the chrome headline empty and use
+these. Default chrome `muted`.
+
+| Field | Type | Required | Renders |
+|-------|------|----------|---------|
+| `src` | string | yes | The photo filename; cover-cropped edge to edge. |
+| `alt` | string | no | Accessible label for the photo. |
+| `title` | string | no | Over-scrim headline. |
+| `caption` | string | no | Caption line inside the scrim. |
+| `credit` | string | no | Small photo credit under the caption. |
+| `focal` | `top` \| `center` \| `bottom` | no | Cover-crop anchor. Default `center`. |
+
+### map (`map.js`)
+
+A stylised inline-SVG outline (Austria / Switzerland / Europe, not to scale)
+whose routes draw via stroke-dashoffset and whose pins fade up. Pin and route
+coordinates are 0..100 viewBox percentages. The outline draws first, routes
+sweep in, then pins drop. Default chrome `blue` (routes read light); on light /
+muted chrome they render brand blue. Use at most one `tone:"accent"` pin (the
+red stopper).
+
+| Field | Type | Required | Renders |
+|-------|------|----------|---------|
+| `region` | `at` \| `ch` \| `eu` | no | Which outline to draw. Default `at`. |
+| `pins` | array of `{ x, y, label, tone? }` | no | Location pins; `x`/`y` are 0..100 percentages; `tone:"accent"` is the one red pin. |
+| `routes` | array of `{ from, to }` | no | Drawn arcs between pins, by index into `pins[]`. Dangling indices are skipped. |
+| `caption` | string | no | Small footnote under the map. |
 
 ---
 

@@ -20,9 +20,20 @@ import { closing } from "./archetypes/closing.js";
 import { statusBoard } from "./archetypes/statusBoard.js";
 import { bentoBoard } from "./archetypes/bentoBoard.js";
 import { poll } from "./archetypes/poll.js";
+import { bigStat } from "./archetypes/bigStat.js";
+import { kpiDashboard } from "./archetypes/kpiDashboard.js";
+import { comparison } from "./archetypes/comparison.js";
+import { agenda } from "./archetypes/agenda.js";
+import { sectionDivider } from "./archetypes/sectionDivider.js";
+import { timeline } from "./archetypes/timeline.js";
+import { pullQuote } from "./archetypes/pullQuote.js";
+import { logoWall } from "./archetypes/logo-wall.js";
+import { imageFullBleed } from "./archetypes/image-full-bleed.js";
+import { map } from "./archetypes/map.js";
 
 const ARCHETYPE = {
   cover, overviewBullets, campaignAnalysis, projectVisual, processDiagram, nextSteps, closing, statusBoard, bentoBoard, poll,
+  bigStat, kpiDashboard, comparison, agenda, sectionDivider, timeline, pullQuote, logoWall, imageFullBleed, map,
 };
 
 /* Default chrome color per archetype (a slide can override via slide.chrome).
@@ -40,10 +51,23 @@ const DEFAULT_CHROME = {
   statusBoard: "muted",
   bentoBoard: "muted",
   poll: "muted",
+  bigStat: "light",
+  kpiDashboard: "muted",
+  comparison: "light",
+  agenda: "light",
+  sectionDivider: "blue",
+  timeline: "light",
+  pullQuote: "muted",
+  logoWall: "muted",
+  imageFullBleed: "muted",
+  map: "blue",
 };
 
-/* Archetypes that own their entire section body (no shared chrome added). */
-const FULL_BLEED = new Set(["cover", "closing"]);
+/* Archetypes that own their entire section body (no shared chrome added).
+   imageFullBleed must bleed to ALL edges and renders its own eyebrow/title/
+   caption over the scrim, so it belongs here (a shared chrome band would leave
+   a strip at the top and could double a headline). */
+const FULL_BLEED = new Set(["cover", "closing", "sectionDivider", "imageFullBleed"]);
 
 /* Slides that get a faint rocket watermark for texture (recap / look-ahead). */
 const WATERMARK_IDS = new Set(["overview-recap", "next-steps"]);
@@ -126,7 +150,14 @@ function sectionOpen(slide, idx) {
   const cls = chromeClass(slide);
   const timing = slide.timing ? ` data-timing="${Number(slide.timing)}"` : "";
   // data-auto-animate pairs the cover & closing (continuous ring arc bookend).
-  const auto = (slide.archetype === "cover" || slide.archetype === "closing")
-    ? ` data-auto-animate data-auto-animate-id="bookend"` : "";
+  // agenda & sectionDivider also opt in so a numbered agenda line FLIP-morphs into
+  // the matching section title (reveal auto-animate, data-id="agenda-<n>"), and so
+  // the divider's ring redraw keyframe (gated to [data-auto-animate=""]) fires.
+  let auto = "";
+  if (slide.archetype === "cover" || slide.archetype === "closing") {
+    auto = ` data-auto-animate data-auto-animate-id="bookend"`;
+  } else if (slide.archetype === "agenda" || slide.archetype === "sectionDivider") {
+    auto = ` data-auto-animate`;
+  }
   return `<section id="slide-${esc(slide.id || idx)}" class="slide ${cls}"${auto}${timing} data-archetype="${esc(slide.archetype)}">`;
 }
