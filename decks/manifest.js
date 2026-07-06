@@ -13,3 +13,10 @@ export const manifest = [
   "2026-07-02-ai-pitchdecks",
   "2026-07-01",
 ];
+
+/* The single source of truth for "which demo is active". It is simply
+   the newest deck (manifest[0]) — the same one the hub hero shows. Both
+   index.html and the presenter derive their default deck from this, so
+   the shared deck, the presenter console and the hub hero never disagree.
+   Add a new demo at the TOP of `manifest` and everything follows. */
+export const ACTIVE_DECK = manifest[0];

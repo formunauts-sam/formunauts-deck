@@ -24,7 +24,10 @@ const ARCHETYPE = {
   cover, overviewBullets, campaignAnalysis, projectVisual, processDiagram, nextSteps, closing, statusBoard, bentoBoard,
 };
 
-/* Default chrome color per archetype (a slide can override via slide.chrome). */
+/* Default chrome color per archetype (a slide can override via slide.chrome).
+   Only light|muted|blue exist. "dark" is retired (no-dark brand invariant,
+   enforced by the deck schema + tools/validate-deck.mjs). No archetype
+   defaults to dark. */
 const DEFAULT_CHROME = {
   cover: "blue",
   overviewBullets: "light",
@@ -101,7 +104,6 @@ function renderSlide(slide, i, total, ctx) {
 
   // Content slides: persistent chrome wraps the archetype's content region.
   const cls = chromeClass(slide);
-  const isDark = cls === "slide--dark" || cls === "slide--blue";
   const watermark = WATERMARK_IDS.has(slide.id)
     ? `<img class="rocket-watermark" src="${esc(ctx.logo("formunauts_visual_blue.svg"))}" alt="" aria-hidden="true">`
     : "";

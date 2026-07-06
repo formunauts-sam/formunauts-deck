@@ -30,6 +30,8 @@
    notes, titles and the jump list still populate.
    ============================================================ */
 
+import { ACTIVE_DECK } from "../../decks/manifest.js";
+
 /* ---- Protocol constants (kept in lock-step with the deck side) ---- */
 const CHANNEL = "fmnts-deck";
 const SNAPSHOT_KEY = "fmnts-deck-state";
@@ -43,10 +45,12 @@ const DEFAULT_TIMING = 45;
    window "not detected" and showing the reconnect banner. */
 const WATCHDOG_MS = 2000;
 
-/* The active demo. Kept in sync with index.html's DEFAULT_DECK so the
-   standalone / jump-list fallback loads the same content the deck shows.
-   Overridable with ?deck=YYYY-MM-DD (same rule as index.html). */
-const DEFAULT_DECK = "2026-07-01";
+/* The active demo. Derived from the manifest's newest entry (ACTIVE_DECK
+   = manifest[0]) — the SAME single source of truth index.html and the hub
+   hero use, so the standalone / jump-list fallback always loads the deck
+   the shared window shows. Overridable with ?deck=YYYY-MM-DD (same rule as
+   index.html). */
+const DEFAULT_DECK = ACTIVE_DECK;
 
 /* Annotation remote-drive. The preview maps pointer positions onto the
    same 16:9 aspect-fit letterbox reveal applies inside the peek iframe,

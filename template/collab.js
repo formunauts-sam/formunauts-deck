@@ -25,9 +25,12 @@
      · viewer     follows the presenter's slide, votes in polls,
                   raises a hand, asks questions, sends reactions.
 
-   Transport: partysocket (auto-reconnect) loaded as an ES module
-   from esm.sh — no build step, no bundler. If that import fails
-   (offline, CSP), initCollab degrades to a silent no-op.
+   Transport (DEFAULT): local BroadcastChannel — zero network, zero
+   CDN, works offline. The PartyKit transport is an ALTERNATE that
+   needs a vendored partysocket (vendor/partysocket.mjs — see
+   PLATFORM-V2-CONCEPT.md Wave 6); it is NOT bundled here, so if it is
+   ever selected it warns once and falls back to local. Either way
+   initCollab degrades to a silent no-op unless a room + host are set.
 
    Everything visual is injected into a single scoped <style> that
    references ONLY brand tokens (--fmnts-*, --blue-*, --radius-*,
@@ -445,14 +448,40 @@ export function initCollab(Reveal, opts = {}) {
 }
 
 /* ------------------------------------------------------------------
-   Networking + wiring (async so we can dynamic-import partysocket).
+   PartyKit transport loader — ALTERNATE, not wired up in Wave 0.
+   Resolves the PartySocket class from a LOCALLY vendored module only
+   (vendor/partysocket.mjs, added in Wave 6). No CDN, no static import
+   specifier — so bundlers/CSP never see a remote host. Returns null
+   when the vendor file is absent; the caller warns and falls back to
+   the local BroadcastChannel transport.
+------------------------------------------------------------------ */
+async function loadPartySocket() {
+  try {
+    // Built at runtime so there is no literal CDN/remote string in source.
+    const spec = new URL("../vendor/partysocket.mjs", import.meta.url).href;
+    const mod = await import(spec);
+    return mod.PartySocket || mod.default || null;
+  } catch {
+    return null; // vendor module not present yet — caller falls back
+  }
+}
+
+/* ------------------------------------------------------------------
+   Networking + wiring (async so we can load the vendored partysocket).
 ------------------------------------------------------------------ */
 async function connect(cx) {
   const { Reveal, role, room, host, token, name, root, ui } = cx;
 
-  const mod = await import("https://esm.sh/partysocket@1.3.0");
-  const PartySocket = mod.PartySocket || mod.default;
-  if (!PartySocket) throw new Error("PartySocket export missing");
+  // partysocket is NOT vendored in Wave 0 — the PartyKit transport is an
+  // alternate that Wave 6 wires up (vendor/partysocket.mjs). We must never
+  // reach a CDN here (CSP-safe, buildless), so this path degrades cleanly.
+  const PartySocket = await loadPartySocket();
+  if (!PartySocket) {
+    console.warn(
+      "[collab] PartyKit transport needs vendor/partysocket.mjs (see PLATFORM-V2-CONCEPT.md Wave 6); falling back to local."
+    );
+    throw new Error("PartySocket transport unavailable");
+  }
 
   const query = { t: token };
   if (name) query.name = name;

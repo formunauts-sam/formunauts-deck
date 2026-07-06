@@ -1,0 +1,501 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://formunauts.com/present/deck.schema.json",
+  "title": "Formunauts Present deck spec",
+  "description": "The authoring contract for decks/<id>.deck.js. A deck is declarative data { meta, slides } rendered by the fixed on-brand chrome in template/render.js. This schema encodes per-archetype required/optional fields, the closed enums, numeric bounds, and the brand invariants the validator enforces (no dark chrome; no emoji; no em-dash). See template/DESIGN.md for the human-readable field tables.",
+  "type": "object",
+  "required": ["meta", "slides"],
+  "additionalProperties": false,
+  "properties": {
+    "meta": { "$ref": "#/$defs/meta" },
+    "slides": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Non-empty, ordered list of slides. First slide is conventionally a cover, last a closing.",
+      "items": { "$ref": "#/$defs/slide" }
+    }
+  },
+
+  "$defs": {
+    "meta": {
+      "type": "object",
+      "description": "Deck-level metadata. title and imagesBase are required (the two render.js actually reads); id/date/lang are strongly recommended for the library and are validated when present. The rest drive grouping and the calendar handoff.",
+      "required": ["title", "imagesBase"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Recommended. Matches the filename decks/<id>.deck.js and the manifest entry. ASCII-safe. When absent, render.js derives the id from the filename.",
+          "pattern": "^[0-9A-Za-z._-]+$"
+        },
+        "title": { "type": "string", "minLength": 1, "description": "Display title (hub, presenter, calendar)." },
+        "date": { "type": "string", "minLength": 1, "description": "Recommended. Display date string, e.g. \"15.07.2026\". Not parsed." },
+        "lang": { "enum": ["en", "de"], "description": "Recommended. Deck language." },
+        "imagesBase": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Base path for this deck's images, e.g. \"./assets/img/<id>/\". All filenames in slides are relative to it.",
+          "pattern": "^\\./"
+        },
+        "occasion": { "type": "string", "description": "Optional. Drives calendar event title and library grouping, e.g. \"All-Hands\"." },
+        "durationMin": { "type": "integer", "minimum": 1, "description": "Optional. Talk length in minutes; drives the calendar end time." },
+        "owner": { "type": "string", "description": "Optional. Deck owner handle for the library." },
+        "status": { "enum": ["draft", "ready", "live", "delivered"], "description": "Optional. Lifecycle state (default \"draft\" when absent)." },
+        "tags": { "type": "array", "items": { "type": "string" }, "description": "Optional. Free-form library tags." },
+        "room": { "type": "string", "description": "Optional. Binds a persistent Engage room code." },
+        "cover": { "type": "string", "description": "Optional. Cover image override filename." }
+      }
+    },
+
+    "chrome": {
+      "enum": ["light", "muted", "blue"],
+      "description": "Chrome field of a slide. STRICTLY light|muted|blue. dark is removed and the validator rejects it (no-dark brand invariant)."
+    },
+
+    "media": {
+      "type": "object",
+      "description": "One framed media item (never a bare <img>). kind:\"device\" routes through deviceFrame, anything else through assetFrame.",
+      "required": ["file"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["asset", "device"], "description": "\"device\" seats the image in hardware/browser chrome (cover-crop); anything else mats it in an aspect frame (contain)." },
+        "file": { "type": "string", "minLength": 1, "description": "Filename only, relative to meta.imagesBase. Must be registered in PX/DEVICE_PX in _shared.js for CLS-free sizing." },
+        "device": { "enum": ["phone", "browser", "desk"], "description": "device kind only. Frame style. Default browser." },
+        "url": { "type": "string", "description": "browser/desk only. Address-bar label (display-only)." },
+        "crop": { "enum": ["top", "center", "bottom"], "description": "device kind only. object-position anchor for the cover-crop. Default top." },
+        "treatment": { "enum": ["duotone"], "description": "asset kind only. Grayscale + multiply-blue wash for supporting cast." },
+        "ratioClass": { "type": "string", "description": "asset kind only. Override the RATIO lookup with an explicit ratio class." },
+        "badge": { "$ref": "#/$defs/badge" },
+        "alt": { "type": "string", "description": "Accessible label." }
+      }
+    },
+
+    "badge": {
+      "type": "object",
+      "description": "Corner badge on a media frame.",
+      "required": ["text"],
+      "additionalProperties": false,
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "tone": { "enum": ["success", "planned", "accent"], "description": "Badge colour. Default success." }
+      }
+    },
+
+    "stat": {
+      "type": "object",
+      "description": "A giant Chillax numeral. Numeric value counts up automatically.",
+      "required": ["value"],
+      "additionalProperties": false,
+      "properties": {
+        "value": { "type": ["string", "number"], "description": "The numeral. A clean number counts up from 0; anything else renders verbatim." },
+        "unit": { "type": "string", "description": "Small unit after the numeral, e.g. \"%\" or \"k\"." },
+        "label": { "type": "string", "description": "Caption under the numeral." }
+      }
+    },
+
+    "slideBase": {
+      "type": "object",
+      "description": "Fields every slide may carry. id + archetype required; the narrative fields (eyebrow/headline/lead) plus notes/timing/chrome are the shared chrome.",
+      "required": ["id", "archetype"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique within the deck. ASCII-safe; used as the section DOM id.",
+          "pattern": "^[0-9A-Za-z._-]+$"
+        },
+        "archetype": {
+          "enum": [
+            "cover", "overviewBullets", "campaignAnalysis", "projectVisual",
+            "processDiagram", "nextSteps", "closing", "bentoBoard", "statusBoard"
+          ],
+          "description": "Which renderer builds the slide body."
+        },
+        "eyebrow": { "type": "string", "description": "Small uppercase kicker above the headline." },
+        "headline": { "type": "string", "description": "The slide headline (Chillax)." },
+        "lead": { "type": "string", "description": "One-line standfirst under the headline." },
+        "notes": { "type": "string", "description": "Speaker notes, verbatim, shown in the presenter console (key P)." },
+        "timing": { "type": "number", "minimum": 0, "description": "Optional pacing target in seconds for the presenter." },
+        "chrome": { "$ref": "#/$defs/chrome" },
+        "backdrop": { "enum": ["muted"], "description": "Legacy alias for chrome:\"muted\" (only honoured when chrome is absent). Prefer chrome." }
+      }
+    },
+
+    "slide": {
+      "allOf": [
+        { "$ref": "#/$defs/slideBase" },
+
+        {
+          "if": { "properties": { "archetype": { "const": "cover" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "sub": { "type": "string", "description": "Sub-line under the headline rule." }
+            }
+          }
+        },
+
+        {
+          "if": { "properties": { "archetype": { "const": "closing" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "statement": { "type": "string", "description": "The closing statement (large)." },
+              "sub": { "type": "string", "description": "Sub-line under the statement." },
+              "site": { "type": "string", "description": "Site line, e.g. \"formunauts.com\"." }
+            }
+          }
+        },
+
+        {
+          "if": { "properties": { "archetype": { "const": "overviewBullets" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "variant": { "enum": ["default", "quiet"], "description": "\"quiet\" renders the two-column calm layout instead of numbered bullets." },
+              "bullets": { "type": "array", "items": { "type": "string" }, "description": "default variant. Numbered bullet lines." },
+              "aside": { "type": "array", "items": { "type": "string" }, "description": "default variant. \"Also shipped\" side panel lines." },
+              "columns": {
+                "type": "array",
+                "description": "quiet variant. Two calm columns.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "title": { "type": "string" },
+                    "items": { "type": "array", "items": { "type": "string" } }
+                  }
+                }
+              }
+            }
+          }
+        },
+
+        {
+          "if": { "properties": { "archetype": { "const": "campaignAnalysis" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "funnel": {
+                "type": "array",
+                "description": "Funnel stages, widest first. Numeric value counts up.",
+                "items": {
+                  "type": "object",
+                  "required": ["label", "value"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "label": { "type": "string" },
+                    "value": { "type": ["string", "number"] },
+                    "note": { "type": "string", "description": "Small note beside the label, e.g. a percentage." },
+                    "tip": { "type": "string", "description": "Hover/click tooltip text (interactive funnel)." }
+                  }
+                }
+              },
+              "pills": {
+                "type": "array",
+                "description": "The 2x2 metric-card grid. tone:\"accent\" marks the one red money metric.",
+                "items": {
+                  "type": "object",
+                  "required": ["label", "value"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "label": { "type": "string" },
+                    "value": { "type": ["string", "number"] },
+                    "tone": { "enum": ["accent"], "description": "Red-accented emphasis card. At most one per deck." }
+                  }
+                }
+              },
+              "nextStep": {
+                "type": "object",
+                "description": "The one sanctioned activity-stripe callout.",
+                "additionalProperties": false,
+                "properties": {
+                  "label": { "type": "string" },
+                  "detail": { "type": "string" },
+                  "when": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+
+        {
+          "if": { "properties": { "archetype": { "const": "projectVisual" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "layout": { "enum": ["hero", "masonry", "single"], "description": "Chooses the sub-layout. Absent falls back to single." },
+              "hero": {
+                "type": "object",
+                "description": "hero layout. The live post seated in a phone frame.",
+                "required": ["src"],
+                "additionalProperties": false,
+                "properties": {
+                  "src": { "type": "string" },
+                  "tag": { "type": "string", "description": "Badge text, e.g. \"LIVE\"." },
+                  "tone": { "type": "string", "description": "Legacy badge tone hint (unused by renderer; kept for authoring intent)." }
+                }
+              },
+              "thumbs": {
+                "type": "array",
+                "description": "hero layout. Planned-post thumbnails.",
+                "items": {
+                  "type": "object",
+                  "required": ["src"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "src": { "type": "string" },
+                    "tag": { "type": "string" }
+                  }
+                }
+              },
+              "metrics": {
+                "type": "array",
+                "description": "hero layout. Stat pills; numeric value counts up.",
+                "items": {
+                  "type": "object",
+                  "required": ["value", "label"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "value": { "type": ["string", "number"] },
+                    "label": { "type": "string" },
+                    "unit": { "type": "string" },
+                    "tone": { "enum": ["accent"], "description": "Red-accented emphasis metric." }
+                  }
+                }
+              },
+              "band": {
+                "type": "object",
+                "description": "hero layout. Full-width banner strip.",
+                "required": ["src"],
+                "additionalProperties": false,
+                "properties": {
+                  "src": { "type": "string" },
+                  "url": { "type": "string" }
+                }
+              },
+              "cadence": { "type": "string", "description": "hero layout. Pulsing cadence chip text." },
+              "bullets": {
+                "type": "array",
+                "description": "single layout (slide 05 style). String or {t, arrow?, tone?}.",
+                "items": {
+                  "oneOf": [
+                    { "type": "string" },
+                    {
+                      "type": "object",
+                      "required": ["t"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "t": { "type": "string" },
+                        "arrow": { "type": "boolean", "description": "Renders a → mark instead of a dot." },
+                        "tone": { "enum": ["accent"], "description": "Red-accented lead line." }
+                      }
+                    }
+                  ]
+                }
+              },
+              "teaser": {
+                "type": "object",
+                "description": "single layout. Small teaser image beside the bullets.",
+                "required": ["src"],
+                "additionalProperties": false,
+                "properties": { "src": { "type": "string" } }
+              },
+              "showcase": {
+                "type": "object",
+                "description": "single layout. One centered showcase image (owns the slide).",
+                "required": ["src"],
+                "additionalProperties": false,
+                "properties": { "src": { "type": "string" } }
+              },
+              "gallery": {
+                "type": "array",
+                "description": "masonry layout. Wall tiles. String or {src, feature?, channel?, url?, alt?}.",
+                "items": {
+                  "oneOf": [
+                    { "type": "string" },
+                    {
+                      "type": "object",
+                      "required": ["src"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "src": { "type": "string" },
+                        "feature": { "type": "boolean", "description": "The one sanctioned cover-crop money shot in the wall." },
+                        "channel": { "enum": ["instagram", "linkedin"], "description": "Channel glyph badge." },
+                        "url": { "type": "string" },
+                        "alt": { "type": "string" }
+                      }
+                    }
+                  ]
+                }
+              },
+              "more": {
+                "type": "object",
+                "description": "masonry layout. \"+N more\" ghost tile.",
+                "additionalProperties": false,
+                "properties": {
+                  "value": { "type": "string" },
+                  "label": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+
+        {
+          "if": { "properties": { "archetype": { "const": "processDiagram" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "steps": {
+                "type": "array",
+                "description": "Ordered process steps joined by blue arrows.",
+                "items": {
+                  "type": "object",
+                  "required": ["label"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "n": { "type": ["string", "number"], "description": "Step number label (defaults to position)." },
+                    "label": { "type": "string" },
+                    "sub": { "type": "string" },
+                    "icon": { "enum": ["database", "scan-search", "sparkles", "camera", "globe", "git-branch"], "description": "Lucide glyph id; must exist in the ICONS map in _shared.js." }
+                  }
+                }
+              },
+              "footnote": { "type": "string", "description": "Optional footnote under the process." }
+            }
+          }
+        },
+
+        {
+          "if": { "properties": { "archetype": { "const": "nextSteps" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "columns": {
+                "type": "array",
+                "description": "Timeline lanes. tone:\"muted\" is the ongoing (dashed) lane; anything else is the active (blue) lane.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "title": { "type": "string" },
+                    "tone": { "enum": ["active", "muted"], "description": "Lane style. muted = ongoing/dashed; active (or absent) = forward/blue." },
+                    "items": {
+                      "type": "array",
+                      "description": "Lane nodes. String or {t, icon?, when?}.",
+                      "items": {
+                        "oneOf": [
+                          { "type": "string" },
+                          {
+                            "type": "object",
+                            "required": ["t"],
+                            "additionalProperties": false,
+                            "properties": {
+                              "t": { "type": "string" },
+                              "icon": { "enum": ["database", "scan-search", "sparkles", "camera", "globe", "git-branch"], "description": "Lucide glyph id from ICONS." },
+                              "when": { "type": "string", "description": "Datestamp tag, e.g. \"~1 wk\"." }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+
+        {
+          "if": { "properties": { "archetype": { "const": "bentoBoard" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "meter": {
+                "type": "object",
+                "description": "Optional completion meter across the top.",
+                "additionalProperties": false,
+                "properties": {
+                  "done": { "type": "number" },
+                  "total": { "type": "number" },
+                  "label": { "type": "string" }
+                }
+              },
+              "tiles": {
+                "type": "array",
+                "description": "White cards placed on a 12-column bento grid.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "span": { "type": "integer", "minimum": 1, "maximum": 12, "description": "Column span 1..12 (clamped; default 6 for hero, else 4)." },
+                    "rowspan": { "type": "integer", "minimum": 1, "maximum": 4, "description": "Row span 1..4 (clamped; default 1)." },
+                    "tone": { "enum": ["hero", "accent", "ghost", "plain"], "description": "Emphasis. Default plain." },
+                    "state": { "enum": ["done", "active", "next"], "description": "Status dot + pill." },
+                    "stateLabel": { "type": "string", "description": "Override the pill text (defaults to state)." },
+                    "eyebrow": { "type": "string" },
+                    "title": { "type": "string" },
+                    "text": { "type": "string" },
+                    "stat": { "$ref": "#/$defs/stat" },
+                    "media": { "$ref": "#/$defs/media" }
+                  }
+                }
+              }
+            }
+          }
+        },
+
+        {
+          "if": { "properties": { "archetype": { "const": "statusBoard" } }, "required": ["archetype"] },
+          "then": {
+            "additionalProperties": false,
+            "description": "DEPRECATED: statusBoard defaults to a dark board and is being retired. Migrate to bentoBoard with tile state tones. Kept for validation of in-flight decks only.",
+            "properties": {
+              "id": true, "archetype": true, "eyebrow": true, "headline": true,
+              "lead": true, "notes": true, "timing": true, "chrome": true, "backdrop": true,
+              "groups": {
+                "type": "array",
+                "description": "DEPRECATED. Status columns of {title, items:[{t, state}]}.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "title": { "type": "string" },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["t"],
+                        "additionalProperties": false,
+                        "properties": {
+                          "t": { "type": "string" },
+                          "state": { "enum": ["done", "active", "next"] }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

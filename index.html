@@ -38,12 +38,16 @@
     import { initInteractive } from "./template/interactive.js";
     import { initDeckLink } from "./template/presenter/deck-link.js";
     import { initCollab } from "./template/collab.js";
+    import { ACTIVE_DECK } from "./decks/manifest.js";
 
     /* ---------------------------------------------------------------
-       Deck selection. Default = the active demo (the ONE per-demo line).
-       ?deck=YYYY-MM-DD loads decks/YYYY-MM-DD.deck.js with no html edit.
+       Deck selection. Default = the active demo, which is ALWAYS the
+       newest manifest entry (ACTIVE_DECK = manifest[0]). This is the
+       single source of truth shared with the hub hero and presenter.js,
+       so they can never drift apart. ?deck=YYYY-MM-DD loads
+       decks/YYYY-MM-DD.deck.js with no html edit.
     --------------------------------------------------------------- */
-    const DEFAULT_DECK = "2026-07-01";
+    const DEFAULT_DECK = ACTIVE_DECK;
     const wanted = new URLSearchParams(location.search).get("deck") || DEFAULT_DECK;
     const safe = /^[0-9A-Za-z._-]+$/.test(wanted) ? wanted : DEFAULT_DECK;
 
