@@ -12,6 +12,17 @@ BRANCH="main"
 
 cd "$(dirname "$0")"
 
+# 0. GUARDRAIL: every deck in the manifest must validate before we publish.
+#    A typo'd field renders empty at runtime; the validator catches it here so
+#    a broken deck can never go live. Skip with SKIP_VALIDATE=1 in a pinch.
+if [ "${SKIP_VALIDATE:-0}" != "1" ] && command -v node >/dev/null 2>&1; then
+  echo "· validating decks…"
+  if ! node tools/validate-deck.mjs --all; then
+    echo "✗ deck validation failed — fix the errors above or re-run with SKIP_VALIDATE=1" >&2
+    exit 1
+  fi
+fi
+
 # 1. git init (idempotent) + .nojekyll so dist/ & plugin/ serve verbatim
 [ -d .git ] || git init -b "$BRANCH"
 touch .nojekyll

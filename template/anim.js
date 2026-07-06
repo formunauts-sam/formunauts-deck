@@ -45,21 +45,28 @@ export function bookendOrbit(corner /* "br" | "tl" */) {
 /* ease-out-expo, matches --ease-out-expo */
 function easeOutExpo(t) { return t === 1 ? 1 : 1 - Math.pow(2, -10 * t); }
 
+/* Group thousands for readability, but ONLY at 10000+ so 4-digit years
+   (2026) and small tallies (428) are never grouped. A big-stat like
+   4820000 reads as 4,820,000; a funnel count of 428 stays 428. */
+function fmtNum(n) {
+  return Math.abs(n) >= 10000 ? n.toLocaleString("en-US") : String(n);
+}
+
 export function runCountUp(el) {
   const target = Number(el.getAttribute("data-count-to"));
   if (!Number.isFinite(target)) return;
 
-  if (REDUCED) { el.textContent = String(target); return; }
-  if (el.dataset.counted === "1") { el.textContent = String(target); return; }
+  if (REDUCED) { el.textContent = fmtNum(target); return; }
+  if (el.dataset.counted === "1") { el.textContent = fmtNum(target); return; }
   el.dataset.counted = "1";
 
   const start = performance.now();
   function frame(now) {
     const p = Math.min(1, (now - start) / COUNT_MS);
     const val = Math.round(target * easeOutExpo(p));
-    el.textContent = String(val);
+    el.textContent = fmtNum(val);
     if (p < 1) requestAnimationFrame(frame);
-    else el.textContent = String(target);
+    else el.textContent = fmtNum(target);
   }
   requestAnimationFrame(frame);
 }
