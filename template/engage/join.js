@@ -248,17 +248,23 @@ export function roomCode(roomId) {
    from ?room= (collab.js / viewer.js), and ?deck= from the deck id, so
    a scan lands in the right room following the right deck.
 ------------------------------------------------------------------ */
-function buildJoinUrl(room, deckId) {
+function buildJoinUrl(room, deckId, mode) {
+  // A REMOTE transport (supabase) must be carried into the join link, or a
+  // viewer who scans the QR boots on the local BroadcastChannel and never
+  // reaches the presenter's remote deck. Local mode needs no param (default).
+  const remote = mode && mode !== "local" ? mode : "";
   try {
     const u = new URL("viewer.html", document.baseURI);
     if (deckId) u.searchParams.set("deck", deckId);
     if (room) u.searchParams.set("room", room);
+    if (remote) u.searchParams.set("engage", remote);
     return u.toString();
   } catch {
     // No document.baseURI (non-browser) — a best-effort relative string.
     const params = [];
     if (deckId) params.push("deck=" + encodeURIComponent(deckId));
     if (room) params.push("room=" + encodeURIComponent(room));
+    if (remote) params.push("engage=" + encodeURIComponent(remote));
     return "viewer.html" + (params.length ? "?" + params.join("&") : "");
   }
 }
@@ -279,7 +285,7 @@ export function buildJoinPanel(opts = {}) {
   const room = (opts.room || "").trim();
   const deckId = (opts.deckId || "").trim();
   const title = opts.title || "Join the room";
-  const url = buildJoinUrl(room, deckId);
+  const url = buildJoinUrl(room, deckId, opts.mode);
   const code = roomCode(room);
 
   const root = el("div", { class: "jn-root", role: "dialog", "aria-modal": "true", "aria-label": title, hidden: true });
@@ -379,6 +385,9 @@ export function initJoin(engage, opts = {}) {
     room,
     deckId: opts.deckId,
     title: opts.title,
+    // carry the live transport mode so the QR/link sends viewers to the SAME
+    // transport as the presenter (a supabase deck needs supabase viewers).
+    mode: transport && transport.mode,
     onClose: () => api.close(),
   });
   document.body.appendChild(panel.root);

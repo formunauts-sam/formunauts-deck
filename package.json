@@ -11,6 +11,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.0",
+    "esbuild": "^0.28.1",
     "reveal.js": "^6.0.1",
     "reveal.js-plugins": "^4.6.0",
     "reveal.js-pointer": "^0.1.4"

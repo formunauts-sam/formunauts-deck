@@ -410,7 +410,37 @@ function readDeckTransform() {
    deck id. ?room= wins so a second-screen viewer can override. The
    deck host is always joinable locally, so a room is ALWAYS resolved.
 ------------------------------------------------------------------ */
-function resolveRoom(opts) {
+/* An unguessable room code from an unambiguous alphabet (no O/0, I/1). Uses
+   crypto when available. This is the "join by secret link" security model for
+   the pre-auth phase: knowing the code is what lets you into a room. */
+function randomRoomCode(len = 8) {
+  const alpha = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  const arr = new Uint32Array(len);
+  try {
+    crypto.getRandomValues(arr);
+  } catch {
+    for (let i = 0; i < len; i++) arr[i] = Math.floor(Math.random() * 0xffffffff);
+  }
+  let out = "";
+  for (let i = 0; i < len; i++) out += alpha[arr[i] % alpha.length];
+  return out;
+}
+
+/* The presenter's room on a REMOTE transport: a random code, stable across
+   reloads within this session (sessionStorage), keyed by deck so two decks get
+   two rooms. Viewers never hit this path, they carry ?room= from the join link. */
+function remotePresenterRoom(deckId) {
+  const key = "fmnts-engage-room:" + (deckId || "deck");
+  try {
+    let r = sessionStorage.getItem(key);
+    if (!r) { r = randomRoomCode(); sessionStorage.setItem(key, r); }
+    return r;
+  } catch {
+    return randomRoomCode();
+  }
+}
+
+function resolveRoom(opts, mode, role) {
   let fromQuery = "";
   try {
     fromQuery = (new URLSearchParams(location.search).get("room") || "").trim();
@@ -422,12 +452,24 @@ function resolveRoom(opts) {
     opts && opts.deck && opts.deck.meta && typeof opts.deck.meta.room === "string"
       ? opts.deck.meta.room.trim()
       : "";
+  // An explicit room ALWAYS wins: a viewer's join link carries ?room=<code>.
+  const explicit = fromQuery || fromOpts || metaRoom;
+  if (explicit) return explicit;
+
   const deckId =
     (opts && typeof opts.deckId === "string" && opts.deckId.trim()) ||
     (opts && opts.deck && opts.deck.meta && typeof opts.deck.meta.id === "string"
       ? opts.deck.meta.id.trim()
       : "");
-  return fromQuery || fromOpts || metaRoom || deckId || "default";
+
+  // On a REMOTE transport the room MUST be unguessable, so a random person
+  // cannot join or drive a room just by knowing the deck id. The presenter
+  // gets a random code and shares it via the join QR. Local (same-browser
+  // testing) stays deck-scoped so it just works with no code to pass around.
+  const isRemote = mode === "supabase" || mode === "partykit";
+  if (isRemote && role === "presenter") return remotePresenterRoom(deckId);
+
+  return deckId || "default";
 }
 
 /* A stable per-client id for this tab, persisted in sessionStorage so
@@ -472,7 +514,7 @@ export function initCollab(Reveal, opts = {}) {
   // A viewer surface (Wave 3) opens the same origin with ?role=viewer.
   const role = q.get("role") === "viewer" ? "viewer" : "presenter";
   const mode = q.get("engage") || "local";
-  const room = resolveRoom(opts);
+  const room = resolveRoom(opts, mode, role);
   const name = (opts.name || q.get("name") || "").trim();
   const clientId = ensureClientId();
 
@@ -602,6 +644,13 @@ function wire(cx) {
       "word",
       "vpointer",
     ];
+    // When the transport tracks presence NATIVELY (Supabase Presence), the
+    // adapter owns the live count + hands and publishes its own presence
+    // frames. Our by-hand viewers-Set bookkeeping would then DUEL with it, so
+    // we skip the manual count/drop on such transports and only keep it for the
+    // local BroadcastChannel simulator, which has no presence primitive.
+    const nativePresence = transport.tracksPresenceNatively === true;
+
     VIEWER_INBOUND.forEach((type) => {
       transport.on(type, (msg) => {
         if (msg.from === cx.clientId) return; // ignore our own re-broadcasts
@@ -609,9 +658,11 @@ function wire(cx) {
           viewers.add(msg.from);
           // hydrate the joiner with a `state` snapshot (reducer handles it)
           ingestViewer(msg);
-          // and bump presence to the live viewer set
-          const p = setPresenceCount(authState, viewers.size);
-          transport.send(p);
+          // and bump presence to the live viewer set (local transport only)
+          if (!nativePresence) {
+            const p = setPresenceCount(authState, viewers.size);
+            transport.send(p);
+          }
           return;
         }
         ingestViewer(msg);
@@ -619,10 +670,12 @@ function wire(cx) {
     });
 
     // A departing viewer (best-effort; BroadcastChannel has no close event,
-    // so this fires only on an explicit bye from the viewer surface).
+    // so this fires only on an explicit bye from the viewer surface). Native
+    // presence transports detect leaves themselves, so skip the manual drop.
     transport.on("bye", (msg) => {
       if (msg.from === cx.clientId) return;
       viewers.delete(msg.from);
+      if (nativePresence) return;
       const p = setPresenceCount(authState, viewers.size);
       transport.send(p);
       const dropped = dropClient(authState, msg.from);

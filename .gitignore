@@ -1,3 +1,8 @@
+.supabase-secrets
+.env
+.env.*
+*secret*
+*.key
 node_modules/
-.DS_Store
-*.log
+vendor/.build/
+package-lock.json

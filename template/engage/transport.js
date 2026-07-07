@@ -47,6 +47,9 @@
    locally when Wave 6 lands (see §4.4).
    ============================================================ */
 
+import { createClient } from "../../vendor/supabase.mjs";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabase-config.js";
+
 export const PROTO = 1; // bump if the envelope shape changes
 
 /* Transport modes — the ?engage= values and the resolved set. */
@@ -131,10 +134,15 @@ export function makeTransport(mode, opts = {}) {
   };
 
   if (resolved === "supabase") {
-    console.warn(
-      "[transport] supabase adapter arrives in Wave 6 (see PLATFORM-V2-CONCEPT.md §4.4); falling back to local BroadcastChannel."
-    );
-    return new BroadcastChannelTransport(shared);
+    try {
+      return new SupabaseRealtimeTransport(shared);
+    } catch (err) {
+      console.warn(
+        "[transport] supabase adapter failed to initialise; falling back to local BroadcastChannel.",
+        err
+      );
+      return new BroadcastChannelTransport(shared);
+    }
   }
   if (resolved === "partykit") {
     console.warn(
@@ -336,6 +344,376 @@ class BroadcastChannelTransport {
     const set = this._handlers.get(envelope.t);
     if (!set || set.size === 0) return;
     // copy so a handler that unsubscribes mid-dispatch is safe
+    for (const h of Array.from(set)) {
+      try {
+        h(envelope);
+      } catch (err) {
+        console.warn("[transport] handler for", envelope.t, "threw", err);
+      }
+    }
+  }
+
+  _setStatus(next) {
+    if (this._status === next) return;
+    this._status = next;
+    for (const cb of Array.from(this._statusCbs)) {
+      try {
+        cb(next);
+      } catch {
+        /* ignore a throwing status callback */
+      }
+    }
+  }
+}
+
+/* ==================================================================
+   SupabaseRealtimeTransport — the REMOTE adapter (?engage=supabase).
+   ------------------------------------------------------------------
+   Satisfies the SAME interface as BroadcastChannelTransport
+   (connect/send/on/onStatus/presence/close/.mode/.isAuthority) so NO
+   Engage feature code changes when the backend flips.
+
+   Wire model — one Realtime channel per room:
+     · Broadcast carries every live message. self:true makes the
+       channel echo the sender's own broadcast back, MATCHING the
+       local adapter's self-dispatch (send() there self-delivers, and
+       the authority reducer relies on that echo to break its own loop
+       via the `from === clientId` guard in collab.js).
+     · Native Presence tracks live viewers. On every presence sync we
+       recompute { count, hands } from presenceState() and hand it to
+       local handlers as a `presence` frame, mirroring what the local
+       host publishes. count = number of VIEWER presences; hands =
+       viewers with hand:true.
+
+   The presenter deck stays the AUTHORITY: it still runs authority.js,
+   reduces inbound viewer verbs, and re-broadcasts `state`/`presence`
+   fan-out — which Supabase Broadcast delivers to everyone (incl. self
+   via self:true). Late joiners hydrate via the authority's
+   hello -> to-addressed `state` reply, exactly as on local, so
+   hydrate()/snapshot() stay local-only conveniences (kept for the
+   optional viewer.js hydrate() call; harmless for supabase).
+================================================================== */
+
+/* Module singleton — one client for the whole page (a page is either a
+   deck tab or a viewer tab, never both). createClient is cheap but the
+   client owns a WebSocket, so we share one across any transports the
+   page builds. */
+let _sbClient = null;
+function supabaseClient() {
+  if (_sbClient) return _sbClient;
+  _sbClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  return _sbClient;
+}
+
+class SupabaseRealtimeTransport {
+  constructor(shared) {
+    this.mode = "supabase";
+    this.roomId = shared.roomId;
+    this.role = shared.role;
+    this.token = shared.token;
+    this.name = shared.name;
+    this.clientId = shared.clientId;
+    this.isAuthority = shared.isAuthority;
+    // Supabase owns the live count + raised hands via native Presence, so the
+    // deck host must NOT run its own by-hand presence bookkeeping (collab.js
+    // reads this flag and stands down). The local adapter leaves it unset.
+    this.tracksPresenceNatively = true;
+
+    this._client = null;
+    this._channel = null;
+    this._seq = 0; // monotonically increasing per-sender sequence
+    this._handlers = new Map(); // type -> Set<handler>
+    this._statusCbs = new Set();
+    this._status = STATUS.CONNECTING;
+    this._presence = { count: 0, hands: 0 }; // derived from native presence
+    this._handOn = false; // this viewer's own raised-hand flag (tracked)
+    this._closed = false;
+    this._boundBroadcast = null; // wildcard broadcast unsubscribe (via channel.on)
+  }
+
+  /* ---- connect: open the channel, subscribe, resolve on SUBSCRIBED. */
+  connect() {
+    if (this._closed) return Promise.resolve();
+    this._setStatus(STATUS.CONNECTING);
+
+    let client;
+    try {
+      client = supabaseClient();
+    } catch (err) {
+      // No client — a dead-but-safe transport; report closed and resolve
+      // so callers never hang.
+      console.warn("[transport] supabase client unavailable", err);
+      this._setStatus(STATUS.CLOSED);
+      return Promise.resolve();
+    }
+    this._client = client;
+
+    // self:true so we receive our OWN broadcasts (local-adapter parity).
+    // presence.key keys this peer's presence by its stable clientId.
+    this._channel = client.channel(channelName(this.roomId), {
+      config: {
+        broadcast: { self: true },
+        presence: { key: this.clientId },
+      },
+    });
+
+    // Fan every broadcast event out to our typed handlers. We register a
+    // single wildcard-ish listener per event lazily in on(); but Supabase
+    // filters broadcast by event name, so we instead subscribe to each
+    // event as handlers are added (see _ensureEvent). Presence is wired
+    // here, once.
+    this._channel.on("presence", { event: "sync" }, () => this._syncPresence());
+    this._channel.on("presence", { event: "join" }, () => this._syncPresence());
+    this._channel.on("presence", { event: "leave" }, () =>
+      this._syncPresence()
+    );
+
+    // Re-register any event handlers that on() recorded before connect().
+    for (const type of this._handlers.keys()) this._ensureEvent(type);
+
+    return new Promise((resolve) => {
+      let resolved = false;
+      try {
+        this._channel.subscribe((status) => {
+          if (this._closed) return;
+          if (status === "SUBSCRIBED") {
+            this._setStatus(STATUS.LIVE);
+            // Track our presence so the count is native. Viewers count;
+            // the presenter (authority) also tracks so a viewer never
+            // mistakes the host for a peer only if it filters role — but
+            // to keep count = viewers, the presenter marks role:'presenter'
+            // and _syncPresence excludes it.
+            this._trackSelf();
+            if (!resolved) {
+              resolved = true;
+              resolve();
+            }
+          } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            this._setStatus(STATUS.RECONNECTING);
+          } else if (status === "CLOSED") {
+            this._setStatus(STATUS.CLOSED);
+            if (!resolved) {
+              resolved = true;
+              resolve();
+            }
+          }
+        });
+      } catch (err) {
+        console.warn("[transport] supabase subscribe failed", err);
+        this._setStatus(STATUS.CLOSED);
+        if (!resolved) {
+          resolved = true;
+          resolve();
+        }
+      }
+    });
+  }
+
+  /* ---- send: stamp the full envelope, then broadcast. -----------
+     Callers pass only { t, ...payload }. The stamping is IDENTICAL to
+     the local adapter so the envelope shape is wire-compatible. On
+     Supabase self:true echoes it back to us too, so we do NOT locally
+     self-dispatch here (that would double-deliver). ----------------- */
+  send(msg) {
+    if (this._closed || !msg || typeof msg.t !== "string") return;
+    const envelope = {
+      ...msg,
+      proto: PROTO,
+      room: this.roomId,
+      from: this.clientId,
+      role: this.role,
+      seq: ++this._seq,
+      ts: Date.now(),
+    };
+
+    // A viewer raising/lowering a hand ALSO updates its native presence so
+    // the count is authoritative from presenceState(). The `hand` message
+    // still goes on the wire so authority.js stays consistent.
+    if (this.role === "viewer" && msg.t === "hand") {
+      this._handOn = msg.on === true;
+      this._trackSelf();
+    }
+
+    if (!this._channel) return;
+    try {
+      this._channel.send({
+        type: "broadcast",
+        event: envelope.t,
+        payload: envelope,
+      });
+    } catch {
+      /* dropped frame — the next authoritative state resyncs us */
+    }
+  }
+
+  /* ---- on(type, handler) -> unsubscribe ------------------------- */
+  on(type, handler) {
+    if (typeof type !== "string" || typeof handler !== "function") {
+      return () => {};
+    }
+    let set = this._handlers.get(type);
+    if (!set) {
+      set = new Set();
+      this._handlers.set(type, set);
+      // Wire the broadcast event for this type (idempotent) so the frame
+      // reaches _dispatch. Safe before connect (re-run in connect()).
+      this._ensureEvent(type);
+    }
+    set.add(handler);
+    return () => {
+      const s = this._handlers.get(type);
+      if (s) s.delete(handler);
+    };
+  }
+
+  /* ---- onStatus(cb): connecting|live|reconnecting|closed -------- */
+  onStatus(cb) {
+    if (typeof cb !== "function") return () => {};
+    this._statusCbs.add(cb);
+    try {
+      cb(this._status);
+    } catch {
+      /* ignore a throwing status callback */
+    }
+    return () => this._statusCbs.delete(cb);
+  }
+
+  /* ---- presence(): last { count, hands } from native presence --- */
+  presence() {
+    return { count: this._presence.count, hands: this._presence.hands };
+  }
+
+  /* ---- hydrate()/snapshot(): no-ops for supabase. Late joiners
+     hydrate via the authority's hello -> `state` reply. Kept so the
+     optional transport.hydrate() call in viewer.js is a safe no-op. */
+  hydrate() {
+    return null;
+  }
+  snapshot() {
+    /* authority re-broadcasts `state`; no local persistence needed */
+  }
+
+  /* ---- close: untrack, unsubscribe, mark closed. ---------------- */
+  close() {
+    if (this._closed) return;
+    this._closed = true;
+    if (this._channel) {
+      try {
+        this._channel.untrack();
+      } catch {
+        /* ignore */
+      }
+      try {
+        this._channel.unsubscribe();
+      } catch {
+        /* ignore */
+      }
+      if (this._client) {
+        try {
+          this._client.removeChannel(this._channel);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    this._channel = null;
+    this._setStatus(STATUS.CLOSED);
+    this._handlers.clear();
+  }
+
+  /* ================= internals ================= */
+
+  /* Register the Supabase broadcast listener for one event type. The
+     channel filters by event name, so we add one listener per type the
+     first time a handler for it appears. Guarded so it only wires once
+     the channel exists (connect() replays the set). */
+  _ensureEvent(type) {
+    if (!this._channel) return;
+    const wired = this._wiredEvents || (this._wiredEvents = new Set());
+    if (wired.has(type)) return;
+    wired.add(type);
+    try {
+      this._channel.on("broadcast", { event: type }, ({ payload }) =>
+        this._dispatch(payload)
+      );
+    } catch {
+      wired.delete(type);
+    }
+  }
+
+  /* Track this peer's presence. Viewers count toward `count`; the
+     presenter marks role:'presenter' so _syncPresence can exclude the
+     host from the viewer count. hand only applies to viewers. */
+  _trackSelf() {
+    if (!this._channel) return;
+    try {
+      this._channel.track({
+        clientId: this.clientId,
+        role: this.role,
+        hand: this.role === "viewer" ? this._handOn === true : false,
+      });
+    } catch {
+      /* presence unavailable — count degrades to 0, still functional */
+    }
+  }
+
+  /* Derive { count, hands } from native presenceState() and publish a
+     `presence` frame to LOCAL handlers, mirroring the local host. We
+     stamp role:'presenter' because both viewer.js and collab.js accept
+     a presence frame only when role === 'presenter'; this frame never
+     goes on the wire (it is a local dispatch only), so stamping it as
+     the authoritative presence is correct and keeps feature code
+     untouched. */
+  _syncPresence() {
+    if (!this._channel) return;
+    let count = 0;
+    let hands = 0;
+    try {
+      const stateMap = this._channel.presenceState() || {};
+      for (const key in stateMap) {
+        const metas = stateMap[key];
+        if (!Array.isArray(metas) || metas.length === 0) continue;
+        // one entry per key; take the first meta as the live presence
+        const meta = metas[0];
+        if (meta && meta.role === "presenter") continue; // host is not a viewer
+        count += 1;
+        if (meta && meta.hand === true) hands += 1;
+      }
+    } catch {
+      /* presenceState unavailable — leave prior values */
+      return;
+    }
+    this._presence = { count, hands };
+    // Deliver to local handlers as an authority-shaped presence frame.
+    this._dispatch({
+      proto: PROTO,
+      t: "presence",
+      room: this.roomId,
+      from: this.clientId,
+      role: "presenter",
+      count,
+      hands,
+      ts: Date.now(),
+    });
+  }
+
+  _dispatch(envelope) {
+    if (!envelope || envelope.proto !== PROTO || typeof envelope.t !== "string")
+      return;
+    if (envelope.room && envelope.room !== this.roomId) return;
+    // Keep presence() answerable even when the frame is authority-authored.
+    if (envelope.t === "presence") {
+      this._presence = {
+        count: Number(envelope.count) || 0,
+        hands: Number(envelope.hands) || 0,
+      };
+    } else if (envelope.t === "state" && envelope.presence) {
+      this._presence = envelope.presence;
+    }
+    const set = this._handlers.get(envelope.t);
+    if (!set || set.size === 0) return;
     for (const h of Array.from(set)) {
       try {
         h(envelope);
